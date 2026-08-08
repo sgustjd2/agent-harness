@@ -7,6 +7,45 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### M2 — shared Skill implementation (in progress)
 
+#### Added — `init-project` (slice 2)
+
+- **`init-project`, the second production Skill, and the first that writes files.**
+  Creates `.agent-harness/` — `config.yaml`, `memory/{facts,decisions,patterns}.md`,
+  `runs/`, `proposals/`, and a self-contained `.agent-harness/.gitignore` — and appends a
+  marker block to `CLAUDE.md` and `AGENTS.md`. Instruction-only and dependency-free.
+- **Two-phase approval.** Phase A inspects and proposes, touching nothing. Phase B
+  applies only after approval tied to that specific proposal, re-checks targets
+  immediately before writing, and stops on drift. Explicit invocation is not mutation
+  approval, and stale approval is rejected rather than reused.
+- Idempotent: a second run against an initialized repository produces no diff, reports
+  existing files as unchanged, never duplicates a marker block, and never deletes.
+- Verification gates are **proposed, never enabled and never executed**. Commands are
+  argv arrays, never shell strings.
+- `skills/init-project/references/config-template.yaml` — host-neutral configuration
+  with no gate enabled; validated in tests against the project's own config schema.
+- `skills/init-project/references/initialization-checklist.md` — the pre-write and
+  post-write check.
+- `skills/init-project/agents/openai.yaml` — implicit invocation **disabled**, because a
+  Skill that changes a repository should start only when someone names it.
+- `tests/test_init_project_skill.py` — 45 contract tests.
+
+#### Changed — shared validator (slice 2)
+
+- Skill safety contracts are now checked against **profiles** rather than one table:
+  `read-only` for `plan-work`, `approval-gated-mutation` for `init-project`. A single
+  shared table would have let a file-writing Skill declare itself read-only. Invariants
+  common to both — never execute a command, never reach the network — live in
+  `UNIVERSAL_SKILL_POLICY` and are inherited.
+- Mutation-capable Skills must declare `allowed_path_roots`, their entire write surface.
+  The validator rejects user-scope roots (`~`), absolutes, traversal, and anything under
+  `.git/`, `plugins/`, `marketplace/` or `scripts/`.
+- Required references are per-Skill, because the documents differ.
+- New diagnostic codes: `SKILL_PROFILE_UNDECLARED`, `SKILL_WRITE_ROOTS_MISSING`,
+  `SKILL_WRITE_ROOTS_UNEXPECTED`, `SKILL_WRITE_ROOT_FORBIDDEN`.
+- The allowlist and forbidden-Skill tests now derive from `_common` instead of
+  hard-coding a milestone's membership, so a future slice edits one list rather than
+  restating it in every test file.
+
 #### Added
 
 - **`plan-work`, the first production Skill.** Turns a goal into a structured plan:

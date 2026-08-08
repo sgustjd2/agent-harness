@@ -1,0 +1,73 @@
+# Configuration proposed by init-project for .agent-harness/config.yaml
+#
+# Host-neutral: nothing here is specific to Claude Code or Codex.
+#
+# Gates start EMPTY on purpose. Detection proposes candidate commands, the user
+# approves them, and only then are they written here. An enabled-by-default command
+# would mean this Skill decided to run something on the user's machine.
+
+schema_version: 1
+
+project:
+  # Replace with the repository name.
+  name: CHANGE_ME
+  # Detected types, conservative. Use [generic] when unsure.
+  type:
+    - generic
+
+# git, or none when the directory is not a Git repository. With none, say explicitly
+# that rollback is manual -- there is no checkout to fall back to.
+vcs: git
+
+orchestration:
+  max_parallel_agents: 3
+  max_delegation_depth: 1
+
+verification:
+  # null means "no gates configured yet", which is different from "no gates needed".
+  # Until a gate exists, verification honestly reports unverified rather than passed.
+  gates:
+
+runs:
+  retention_count: 20
+  auto_prune: false
+  # true drops runs/ from .agent-harness/.gitignore, committing run evidence. Raises
+  # leak risk: raw command output is the most likely place for something sensitive to
+  # reach history. Off by default.
+  commit_evidence: false
+
+# ---------------------------------------------------------------------------
+# Candidate gates -- PROPOSED, not enabled. Move an entry into verification.gates
+# only after the user approves it, and set timeout_seconds to a real value first.
+#
+# Only these keys are valid in a gate: id, kind, command, required, timeout_seconds,
+# and optionally working_dir and flaky_policy. `command` is an argv ARRAY; a shell
+# string is a schema violation, because a string invites quoting and injection
+# problems an array cannot have.
+#
+# Python
+#   id: py-test        kind: test       command: ["python", "-m", "pytest", "-q"]
+#                      detected from: pytest.ini, [tool.pytest], a test directory
+#   id: py-lint        kind: lint       command: ["python", "-m", "ruff", "check", "."]
+#                      detected from: .ruff.toml, [tool.ruff]
+#   id: py-typecheck   kind: typecheck  command: ["python", "-m", "mypy", "."]
+#                      detected from: mypy.ini, [tool.mypy]
+#   id: py-build       kind: build      command: ["python", "-m", "build"]
+#                      detected from: [build-system]
+#
+# JavaScript / TypeScript
+#   id: js-test        kind: test       command: ["npm", "run", "test"]
+#                      detected from: package.json scripts.test
+#   id: js-lint        kind: lint       command: ["npm", "run", "lint"]
+#                      detected from: scripts.lint, eslint config
+#   id: ts-typecheck   kind: typecheck  command: ["npx", "tsc", "--noEmit"]
+#                      detected from: tsconfig.json
+#   id: js-build       kind: build      command: ["npm", "run", "build"]
+#                      detected from: scripts.build
+#
+# Package manager comes from the lockfile: package-lock.json is npm, pnpm-lock.yaml is
+# pnpm, yarn.lock is yarn, bun.lockb is bun. Substitute the runner accordingly.
+#
+# Detection proves a config file exists. It does not prove the tool is installed, and
+# init-project must not find out by running it.
+# ---------------------------------------------------------------------------

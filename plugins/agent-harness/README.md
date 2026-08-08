@@ -10,6 +10,7 @@ anything outside it.
 .codex-plugin/plugin.json       Codex manifest, "skills": "./skills/"
 skills/m1-discovery-fixture/    compatibility fixture -- does nothing, by design
 skills/plan-work/               production Skill (experimental), read-only
+skills/init-project/            production Skill (experimental), approval-gated
 core/schemas/                   five packaging schemas
 core/schemas/state/             state schemas -- NOT packaging evidence
 adapters/claude/                Claude integration
@@ -26,9 +27,10 @@ workflow layer, two thin adapters.
 | :--- | :--- | :--- |
 | `m1-discovery-fixture` | compatibility fixture | inert by design -- **not** a product Skill |
 | `plan-work` | production | **experimental**, read-only |
+| `init-project` | production | **experimental**, approval-gated mutation |
 
-**No other production Skill is implemented.** `init-project`, `orchestrate`,
-`verify-work`, `refine-harness`, `apply-refinement` and `doctor` are planned, and
+**No other production Skill is implemented.** `orchestrate`, `verify-work`,
+`refine-harness`, `apply-refinement` and `doctor` are planned, and
 `validate_skills.py` rejects any of those names appearing here until each is actually
 built. A shipped `SKILL.md` is host-discoverable whatever its body says, so a
 placeholder would be a product surface with nothing behind it.
@@ -75,3 +77,34 @@ repository.
 - Skill frontmatter is `name` + `description` only.
 - Nothing writes to user-scope configuration.
 - No hooks. No network access. No telemetry. No third-party dependency.
+
+### `init-project`
+
+Creates the `.agent-harness/` structure in a repository and links it to the host
+instruction file.
+
+**Approval-gated, not read-only.** It works in two phases: inspect and propose, then
+apply only what the user approved for that specific proposal. Explicit invocation is not
+mutation approval — the two gates are independent, which is why implicit invocation is
+**disabled** here while `plan-work` leaves it on.
+
+Its declared write surface is the whole of what it may touch:
+
+| Root | Access |
+| :--- | :--- |
+| `.agent-harness/` | create |
+| `CLAUDE.md`, `AGENTS.md` | **append only**, inside the marker block |
+
+It never overwrites an existing non-empty file, never deletes, never touches `.git/`,
+never writes to user scope (`~/.claude/`, `~/.codex/`, `~/.agents/`), and never executes
+the verification commands it detects — detection is a hypothesis that a tool exists, and
+running it to find out is precisely the side effect this Skill must not have.
+
+Re-running against an initialized repository produces no diff.
+
+### How the two production Skills are checked
+
+Both declare an `agent-harness:policy` marker, but against **different safety profiles**:
+`plan-work` is `read-only`, `init-project` is `approval-gated-mutation`. One flattened
+table would let a Skill that writes files claim it does not. What the profiles share —
+never execute a command, never reach the network — lives in one place and is inherited.

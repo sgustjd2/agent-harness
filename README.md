@@ -10,7 +10,7 @@ accumulated evidence into reviewable proposals that apply only when you say so.
 
 ---
 
-## Status: M2 begun — first production Skill, host verification still pending
+## Status: M2 in progress — two production Skills, host verification still pending
 
 **M2 implementation has begun.** M1 built the repository skeleton and the validation
 pipeline, and verified the packaging contract against real hosts. M2 adds the first
@@ -21,9 +21,16 @@ produces plans, and it does not implement them. It writes no source, changes no
 configuration, runs no command, and creates a file only when you explicitly ask it to
 save a plan.
 
+**`init-project` is the second production Skill.** It initializes portable project state
+— `.agent-harness/` with configuration, memory files, and run and proposal directories —
+and links it to `CLAUDE.md` or `AGENTS.md`. It is **approval-gated**: it inspects the
+repository, shows every path it would write, and applies nothing until you approve that
+specific proposal. It **does not execute the verification commands it detects**; it
+proposes them and leaves them disabled until you say otherwise.
+
 **This is not a stable release.** Remaining M1 host verification is still a release
 blocker -- Codex Skill discovery, the ChatGPT Desktop surfaces, and the hook and
-helper-script runtime experiments are unfinished. Treat `plan-work` as experimental.
+helper-script runtime experiments are unfinished. Treat both Skills as experimental.
 
 | Milestone | Content | State |
 | :--- | :--- | :--- |
@@ -34,15 +41,15 @@ helper-script runtime experiments are unfinished. Treat `plan-work` as experimen
 | M1.3 / M1.3.1 | OpenAI marketplace contract remediation and evidence correction | done |
 | M1.4A | Claude non-interactive load and component discovery | done |
 | M1.4B | Codex Skill discovery, ChatGPT Desktop, hooks, helper execution | **not started** |
-| **M2** | **shared Skill bodies — `plan-work` first** | **in progress** |
+| **M2** | **shared Skill bodies — `plan-work`, `init-project`** | **in progress** |
 | M3–M8 | adapters, state, refinement, pilot, release | not started |
 
 **Exit criteria: 14 of 17 met.** The three unmet criteria all need host access that this
 phase deliberately did not take — see [`docs/m1-traceability.md`](docs/m1-traceability.md).
 
-The installable plugin root contains the compatibility fixture and exactly one
-production Skill, `plan-work`. The other six planned Skills are **not implemented**, and
-validation rejects their names until they are.
+The installable plugin root contains the compatibility fixture and two production
+Skills, `plan-work` and `init-project`. The other five planned Skills are **not
+implemented**, and validation rejects their names until they are.
 
 ---
 
@@ -57,7 +64,8 @@ plugins/agent-harness/                the installable plugin. Self-contained.
   .claude-plugin/plugin.json            Claude manifest
   .codex-plugin/plugin.json             Codex manifest, "skills": "./skills/"
   skills/m1-discovery-fixture/          compatibility fixture, inert by design
-  skills/plan-work/                     first production Skill, read-only
+  skills/plan-work/                     production Skill, read-only
+  skills/init-project/                  production Skill, approval-gated
   core/schemas/                         five packaging schemas
   core/schemas/state/                   state schemas -- NOT packaging evidence
   adapters/{claude,codex}/              host integration + experiment records
@@ -158,10 +166,10 @@ it is deliberately narrower than a vendor contract, it says so in a `$comment`.
 `displayName`, descriptions and owner names are free-form labels. M1.3 removed the
 identifier patterns in error; M1.3.1 restored them.
 
-**M2 has begun, with one Skill.** `plan-work` is implemented and validated; the other
-six planned Skills are not, and their names are still rejected in the installable root.
-A shipped `SKILL.md` is host-discoverable whatever its body says, so an empty
-placeholder would be a product surface with nothing behind it.
+**M2 has two Skills so far.** `plan-work` and `init-project` are implemented and
+validated; the other five planned Skills are not, and their names are still rejected in
+the installable root. A shipped `SKILL.md` is host-discoverable whatever its body says,
+so an empty placeholder would be a product surface with nothing behind it.
 
 ---
 
