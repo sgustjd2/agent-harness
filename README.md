@@ -10,7 +10,7 @@ accumulated evidence into reviewable proposals that apply only when you say so.
 
 ---
 
-## Status: M2 in progress — three production Skills, host verification still pending
+## Status: M2 in progress — four production Skills, host verification still pending
 
 **M2 implementation has begun.** M1 built the repository skeleton and the validation
 pipeline, and verified the packaging contract against real hosts. M2 adds the first
@@ -35,9 +35,16 @@ installs no packages, and edits no source or configuration. Commands are argv ar
 a required timeout, run sequentially. A command that exists is not a command that passed:
 it reports `Passed` only on an observed exit code of 0.
 
+**`doctor` is the fourth production Skill.** It diagnoses **agent-harness itself** --
+installation, environment, config and memory integrity -- and reports `ok` / `warn` /
+`fail` / `unknown` per check with a suggested fix. **`verify-work` verifies your project
+code; `doctor` diagnoses the harness.** In this M2 slice `doctor` is **read-only and
+executes no commands at all** -- not even `--version` or a PATH lookup -- and it repairs
+nothing.
+
 **This is not a stable release.** Remaining M1 host verification is still a release
 blocker -- Codex Skill discovery, the ChatGPT Desktop surfaces, and the hook and
-helper-script runtime experiments are unfinished. Treat all three Skills as
+helper-script runtime experiments are unfinished. Treat all four Skills as
 experimental.
 
 | Milestone | Content | State |
@@ -49,15 +56,15 @@ experimental.
 | M1.3 / M1.3.1 | OpenAI marketplace contract remediation and evidence correction | done |
 | M1.4A | Claude non-interactive load and component discovery | done |
 | M1.4B | Codex Skill discovery, ChatGPT Desktop, hooks, helper execution | **not started** |
-| **M2** | **shared Skill bodies — `plan-work`, `init-project`, `verify-work`** | **in progress** |
+| **M2** | **shared Skill bodies — `plan-work`, `init-project`, `verify-work`, `doctor`** | **in progress** |
 | M3–M8 | adapters, state, refinement, pilot, release | not started |
 
 **Exit criteria: 14 of 17 met.** The three unmet criteria all need host access that this
 phase deliberately did not take — see [`docs/m1-traceability.md`](docs/m1-traceability.md).
 
-The installable plugin root contains the compatibility fixture and three production
-Skills: `plan-work`, `init-project` and `verify-work`. The other four planned Skills are
-**not implemented**, and validation rejects their names until they are.
+The installable plugin root contains the compatibility fixture and four production
+Skills: `plan-work`, `init-project`, `verify-work` and `doctor`. The other three planned
+Skills are **not implemented**, and validation rejects their names until they are.
 
 ---
 
@@ -75,6 +82,7 @@ plugins/agent-harness/                the installable plugin. Self-contained.
   skills/plan-work/                     production Skill, read-only
   skills/init-project/                  production Skill, approval-gated
   skills/verify-work/                   production Skill, bounded execution
+  skills/doctor/                        production Skill, read-only diagnostics
   core/schemas/                         five packaging schemas
   core/schemas/state/                   state schemas -- NOT packaging evidence
   adapters/{claude,codex}/              host integration + experiment records
@@ -175,8 +183,8 @@ it is deliberately narrower than a vendor contract, it says so in a `$comment`.
 `displayName`, descriptions and owner names are free-form labels. M1.3 removed the
 identifier patterns in error; M1.3.1 restored them.
 
-**M2 has three Skills so far.** `plan-work`, `init-project` and `verify-work` are
-implemented and validated; the other four planned Skills are not, and their names are
+**M2 has four Skills so far.** `plan-work`, `init-project`, `verify-work` and `doctor`
+are implemented and validated; the other three planned Skills are not, and their names are
 still rejected in the installable root. A shipped `SKILL.md` is host-discoverable whatever
 its body says, so an empty placeholder would be a product surface with nothing behind
 it.

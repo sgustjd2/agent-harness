@@ -282,7 +282,8 @@ PLANNED_PRODUCTION_SKILLS = [
 # body, references and tests exist -- a shipped SKILL.md is host-discoverable whatever
 # it says, so an unimplemented name in the installable root is a product surface with
 # nothing behind it.
-IMPLEMENTED_PRODUCTION_SKILLS = ["plan-work", "init-project", "verify-work"]  # M2 1-3
+IMPLEMENTED_PRODUCTION_SKILLS = ["plan-work", "init-project", "verify-work",
+                                "doctor"]                    # M2 slices 1-4
 
 # Still unimplemented, and therefore still rejected in the installable root.
 FORBIDDEN_PRODUCTION_SKILLS = [
@@ -383,6 +384,10 @@ SKILL_PROFILE = {
     "plan-work": "read-only",
     "init-project": "approval-gated-mutation",
     "verify-work": "bounded-verification",
+    # doctor reuses the existing read-only profile unchanged. It diagnoses the harness,
+    # so it needs no execution and no write surface -- the profile already says exactly
+    # that, and widening it to fit would have defeated the point of having profiles.
+    "doctor": "read-only",
 }
 
 # Only this profile may run a subprocess. Asserted in tests so a future profile cannot

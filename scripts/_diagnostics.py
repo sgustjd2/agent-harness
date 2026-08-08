@@ -88,6 +88,7 @@ CODES = {
     "PATH_ESCAPES_PLUGIN_ROOT",
     # documentation hygiene
     "UNDOCUMENTED_INSTALL_COMMAND",
+    "PATH_NOT_PORTABLE",
     # generic
     "JSON_INVALID",
     "FILE_MISSING",

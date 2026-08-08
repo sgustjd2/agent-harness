@@ -12,6 +12,7 @@ skills/m1-discovery-fixture/    compatibility fixture -- does nothing, by design
 skills/plan-work/               production Skill (experimental), read-only
 skills/init-project/            production Skill (experimental), approval-gated
 skills/verify-work/             production Skill (experimental), bounded execution
+skills/doctor/                  production Skill (experimental), read-only diagnostics
 core/schemas/                   five packaging schemas
 core/schemas/state/             state schemas -- NOT packaging evidence
 adapters/claude/                Claude integration
@@ -30,9 +31,10 @@ workflow layer, two thin adapters.
 | `plan-work` | production | **experimental**, read-only |
 | `init-project` | production | **experimental**, approval-gated mutation |
 | `verify-work` | production | **experimental**, bounded command execution |
+| `doctor` | production | **experimental**, read-only harness diagnostics |
 
-**No other production Skill is implemented.** `orchestrate`, `refine-harness`,
-`apply-refinement` and `doctor` are planned, and
+**No other production Skill is implemented.** `orchestrate`, `refine-harness` and
+`apply-refinement` are planned, and
 `validate_skills.py` rejects any of those names appearing here until each is actually
 built. A shipped `SKILL.md` is host-discoverable whatever its body says, so a
 placeholder would be a product surface with nothing behind it.
@@ -68,7 +70,7 @@ repository.
 
 - No file may reference a path outside this directory.
 - No *unimplemented* production Skill name (`orchestrate`, `refine-harness`,
-  `apply-refinement`, `doctor`) may appear as a directory here. The allowlist widens one
+  `apply-refinement`) may appear as a directory here. The allowlist widens one
   Skill at a time, as each is implemented.
 - No `scripts/`, `assets/` or dependency manifest inside any Skill: Skills are
   instruction-only, so there is nothing to execute and nothing to install.
@@ -136,12 +138,36 @@ authority to edit anything — `modifies_source` and `modifies_config` stay fals
 Skill has no write surface at all. This milestone writes no evidence file; results come
 back in the response.
 
-### How the three production Skills are checked
+### `doctor`
+
+Diagnoses **agent-harness itself** — installation, environment, and project state — and
+says what to do about anything broken.
+
+**`doctor` diagnoses the harness; `verify-work` verifies your code.** Both "check things",
+and that is the easiest confusion to fall into. "Do my tests pass" is `verify-work`, and
+it needs configured gates plus execution approval. "Why isn't this working at all" is
+`doctor`.
+
+Every check reports `ok`, `warn`, `fail` or `unknown`. It never stops on a failure —
+every applicable check still gets a status — and a complete run means everything was
+judged, not that everything was fine. `unknown` is never upgraded to `fail`, and never
+hidden to reach a green report.
+
+**Read-only, and it runs nothing.** No gate, no `--version`, no `command -v` / `which` /
+`where`. It reuses the existing `read-only` profile unchanged, so an executable whose
+availability cannot be established statically is reported `unknown` rather than probed.
+It repairs nothing: a corrupt config or memory file is a finding, not permission to fix
+it. Remediation commands are printed as suggestions and never executed.
+
+### How the four production Skills are checked
 
 All three declare an `agent-harness:policy` marker, but against **different safety
-profiles**: `plan-work` is `read-only`, `init-project` is `approval-gated-mutation`,
-`verify-work` is `bounded-verification`. One flattened table would let a Skill that
-writes files claim it does not.
+profiles**: `plan-work` and `doctor` are `read-only`, `init-project` is
+`approval-gated-mutation`, `verify-work` is `bounded-verification`. One flattened table
+would let a Skill that writes files claim it does not.
+
+`doctor` reusing `read-only` unchanged is the point of having profiles: a diagnostic that
+needed the profile widened to fit would not have been a diagnostic.
 
 `executes_commands` used to be a universal guarantee. It stopped being one the moment a
 verification Skill existed, so it moved into the individual profiles. Keeping it
