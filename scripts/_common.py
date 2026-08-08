@@ -328,6 +328,12 @@ SKILL_SAFETY_PROFILES = {
         "persistence": "on-request-only",
     },
     # Writes files, but only after approval tied to a shown proposal.
+    #
+    # The two rollback fields are deliberately separate. "Never deletes anything" and
+    # "cleans up after a failed attempt" read as a contradiction when stated as one
+    # promise, and the resolution is a distinction, not a preference: content that
+    # existed BEFORE the attempt is untouchable, while content the attempt itself
+    # created may be withdrawn by it.
     "approval-gated-mutation": {
         **UNIVERSAL_SKILL_POLICY,
         "read_only": False,
@@ -337,6 +343,8 @@ SKILL_SAFETY_PROFILES = {
         "modifies_user_settings": False,
         "overwrites_existing_files": False,
         "idempotent": True,
+        "deletes_preexisting_content": False,
+        "may_rollback_current_attempt": True,
     },
 }
 

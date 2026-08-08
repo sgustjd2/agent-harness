@@ -113,6 +113,8 @@ def test_missing_reference_fails(plugin_tree):
     ("installs_packages", True),
     ("network_access", True),
     ("read_only", True),                     # a writer must not claim read-only
+    ("deletes_preexisting_content", True),   # content that predates the attempt
+    ("may_rollback_current_attempt", False),  # its own writes, though, it may withdraw
 ])
 def test_declared_safety_promises_are_enforced(plugin_tree, key, bad_value):
     """Flipping any promise in the declared contract fails validation."""
@@ -128,6 +130,56 @@ def test_declared_safety_promises_are_enforced(plugin_tree, key, bad_value):
     status, codes = _run(validate_skills.check, plugin_tree)
     assert status != 0
     assert "SKILL_MUTATION_NOT_PERMITTED" in codes, codes
+
+
+def test_rollback_contract_separates_ownership_from_deletion():
+    """The two rollback fields must both be declared, and say opposite things.
+
+    Declared together they resolve what previously read as a contradiction: an attempt
+    may withdraw its own writes, and may never touch what it found. Collapsing them into
+    one flag loses exactly the distinction that makes cleanup safe.
+    """
+    from _common import extract_policy_marker
+
+    declared = yaml.safe_load(extract_policy_marker(SKILL_MD.read_text(encoding="utf-8")))
+    assert declared["deletes_preexisting_content"] is False
+    assert declared["may_rollback_current_attempt"] is True
+
+
+@pytest.mark.parametrize("rule", [
+    "existed before this phase b attempt",   # pre-existing content is untouchable
+    "best-effort rollback may withdraw only what this attempt created",
+    "if complete rollback is impossible",    # manual-cleanup path
+    "while partial state remains",           # success suppression
+])
+def test_rollback_policy_is_stated_in_the_skill_body(rule):
+    """The four rollback rules must be findable by a reader, not only by the validator.
+
+    Whitespace is collapsed first: these phrases wrap across lines, and a line break is
+    a formatting choice. Asserting on the wrapped form would fail the next time someone
+    reflows a paragraph, which teaches people to edit the test instead of reading it.
+    """
+    body = " ".join(SKILL_MD.read_text(encoding="utf-8").lower().split())
+    assert rule in body, f"SKILL.md omits the rule: {rule!r}"
+
+
+@pytest.mark.parametrize("phrase", [
+    "managed-marker-block",          # the term this contract uses
+    "immutable",                     # everything outside the block
+    "append **one** block",          # no block present
+    "only the content inside it",    # exactly one block present
+    "conflict",                      # malformed / nested / duplicated / unmatched
+])
+def test_marker_block_contract_is_stated(phrase):
+    """The owned-region contract replaces the ambiguous append-only wording."""
+    assert phrase in SKILL_MD.read_text(encoding="utf-8"), f"SKILL.md omits {phrase!r}"
+
+
+# No test asserts that the string "append-only" is absent. The Skill deliberately says
+# `This is not "append-only", because ...` to explain why the term changed, and a naive
+# substring check cannot tell an explanation from a claim -- the same false positive the
+# policy marker exists to avoid. The positive assertions above already prove the
+# managed-marker-block contract is the one stated.
 
 
 def test_profile_differs_from_plan_work():
@@ -147,7 +199,7 @@ def test_profile_differs_from_plan_work():
 # ---------------------------------------------------------------- 11. write surface
 
 def test_declared_write_roots_match_the_approved_surface():
-    """11. .agent-harness/ plus append-only marker blocks, and nothing else."""
+    """11. .agent-harness/ plus the managed-marker-block, and nothing else."""
     from _common import ALLOWED_WRITE_PATH_ROOTS, extract_policy_marker
 
     declared = yaml.safe_load(extract_policy_marker(SKILL_MD.read_text(encoding="utf-8")))

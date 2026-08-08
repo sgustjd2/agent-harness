@@ -18,7 +18,19 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   immediately before writing, and stops on drift. Explicit invocation is not mutation
   approval, and stale approval is rejected rather than reused.
 - Idempotent: a second run against an initialized repository produces no diff, reports
-  existing files as unchanged, never duplicates a marker block, and never deletes.
+  existing files as unchanged, and never duplicates a managed-marker-block.
+- **Rollback is bounded by ownership.** Content that existed before a Phase B attempt is
+  never deleted or restored; a failed attempt may withdraw only the exact files and
+  managed-marker-block content that same attempt created. When complete rollback is
+  impossible, the remaining partial state and the manual cleanup steps are reported, and
+  the run is never described as successful. Declared as `deletes_preexisting_content:
+  false` and `may_rollback_current_attempt: true` in the approval-gated-mutation profile.
+- **Host instruction files use a managed-marker-block, not append-only access.** All
+  content outside `<!-- BEGIN agent-harness -->` … `<!-- END agent-harness -->` is
+  immutable. No block means append exactly one; one block means replace only its inner
+  content, and only when it would change; malformed, nested, duplicated or unmatched
+  markers are a conflict and are never modified automatically. "Append-only" was
+  withdrawn because it contradicted the in-place block replacement the contract needs.
 - Verification gates are **proposed, never enabled and never executed**. Commands are
   argv arrays, never shell strings.
 - `skills/init-project/references/config-template.yaml` — host-neutral configuration
