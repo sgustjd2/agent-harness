@@ -151,13 +151,10 @@ def plugin_tree(tmp_path: pathlib.Path):
     (root / ".codex-plugin" / "plugin.json").write_text(
         json.dumps(CODEX_PLUGIN, indent=2), encoding="utf-8")
 
-    fixture = root / "skills" / "m1-discovery-fixture"
-    (fixture / "agents").mkdir(parents=True)
-    (fixture / "SKILL.md").write_text(
-        "---\nname: m1-discovery-fixture\ndescription: valid baseline fixture\n---\n\nbody\n",
-        encoding="utf-8")
-    (fixture / "agents" / "openai.yaml").write_text(
-        "policy:\n  allow_implicit_invocation: false\n", encoding="utf-8")
+    # Copy the REAL Skills rather than hand-writing stand-ins. A baseline that drifts
+    # from what ships stops being a baseline: a negative test would then prove only
+    # that the imitation is broken.
+    shutil.copytree(REPO_ROOT / "plugins" / "agent-harness" / "skills", root / "skills")
 
     for name in SCHEMA_FILES.values():
         shutil.copy2(SCHEMAS / name, root / "core" / "schemas" / name)

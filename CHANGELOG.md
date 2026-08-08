@@ -5,6 +5,44 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### M2 — shared Skill implementation (in progress)
+
+#### Added
+
+- **`plan-work`, the first production Skill.** Turns a goal into a structured plan:
+  tasks with stable IDs and completion conditions, dependency order, parallelization
+  opportunities, acceptance criteria, and a verification plan whose every gate starts
+  at `Not Run`. Instruction-only and dependency-free.
+- `skills/plan-work/references/plan-template.md` — the output structure, field
+  meanings, and ID conventions (`T-01`, `AC-01`, `V-01`, `R-01`).
+- `skills/plan-work/references/quality-checklist.md` — the pre-return check, including
+  the rule that no plan may claim a task, criterion, or gate passed.
+- `skills/plan-work/agents/openai.yaml` — invocation policy only. Implicit invocation
+  is enabled because the Skill is read-only; it grants no tools or permissions.
+- A machine-checkable safety contract: implemented production Skills declare an
+  `agent-harness:policy` marker that `validate_skills.py` parses as YAML, rather than
+  the validator guessing intent from prose.
+- Diagnostic codes `SKILL_POLICY_MARKER_MISSING`, `SKILL_POLICY_MARKER_MALFORMED`,
+  `SKILL_MUTATION_NOT_PERMITTED`, `SKILL_COMMAND_BLOCK_PRESENT`,
+  `SKILL_VERIFICATION_DEFAULT_INVALID`, `SKILL_REFERENCE_MISSING`,
+  `SKILL_EXECUTABLE_DIR_PRESENT`, `SKILL_RUNTIME_DEPENDENCY`,
+  `POLICY_INVOCATION_UNDECLARED`, `POLICY_GRANT_NOT_PERMITTED`.
+- `tests/test_plan_work_skill.py` — 60 contract tests covering the frontmatter policy,
+  name parity, references, path containment, the read-only marker, command-block
+  prohibition, the `Not Run` default, the milestone allowlist, and OpenAI metadata.
+
+#### Changed
+
+- The installable-root Skill allowlist is now derived from
+  `IMPLEMENTED_PRODUCTION_SKILLS` rather than a hard-coded single fixture name, so it
+  widens one Skill at a time as each is built. The six unimplemented production Skills
+  are still rejected.
+- The shared `plugin_tree` test fixture copies the real `skills/` tree instead of
+  hand-writing a stand-in, so the baseline cannot drift from what ships.
+
+`plan-work` is **experimental**. Remaining M1 host verification is still a release
+blocker.
+
 ### M1.1 — scaffold correction and scope audit
 
 Corrective pass over the M1 scaffold. **M2 has not begun.**
