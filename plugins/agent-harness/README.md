@@ -11,6 +11,7 @@ anything outside it.
 skills/m1-discovery-fixture/    compatibility fixture -- does nothing, by design
 skills/plan-work/               production Skill (experimental), read-only
 skills/init-project/            production Skill (experimental), approval-gated
+skills/verify-work/             production Skill (experimental), bounded execution
 core/schemas/                   five packaging schemas
 core/schemas/state/             state schemas -- NOT packaging evidence
 adapters/claude/                Claude integration
@@ -28,9 +29,10 @@ workflow layer, two thin adapters.
 | `m1-discovery-fixture` | compatibility fixture | inert by design -- **not** a product Skill |
 | `plan-work` | production | **experimental**, read-only |
 | `init-project` | production | **experimental**, approval-gated mutation |
+| `verify-work` | production | **experimental**, bounded command execution |
 
-**No other production Skill is implemented.** `orchestrate`, `verify-work`,
-`refine-harness`, `apply-refinement` and `doctor` are planned, and
+**No other production Skill is implemented.** `orchestrate`, `refine-harness`,
+`apply-refinement` and `doctor` are planned, and
 `validate_skills.py` rejects any of those names appearing here until each is actually
 built. A shipped `SKILL.md` is host-discoverable whatever its body says, so a
 placeholder would be a product surface with nothing behind it.
@@ -65,9 +67,9 @@ repository.
 ## Constraints binding everything here
 
 - No file may reference a path outside this directory.
-- No *unimplemented* production Skill name (`init-project`, `orchestrate`,
-  `verify-work`, `refine-harness`, `apply-refinement`, `doctor`) may appear as a
-  directory here. The allowlist widens one Skill at a time, as each is implemented.
+- No *unimplemented* production Skill name (`orchestrate`, `refine-harness`,
+  `apply-refinement`, `doctor`) may appear as a directory here. The allowlist widens one
+  Skill at a time, as each is implemented.
 - No `scripts/`, `assets/` or dependency manifest inside any Skill: Skills are
   instruction-only, so there is nothing to execute and nothing to install.
 - No `agents/`, `hooks/`, `workflows/`, `monitors/`, `scripts/`, `.mcp.json`,
@@ -115,9 +117,35 @@ running it to find out is precisely the side effect this Skill must not have.
 
 Re-running against an initialized repository produces no diff.
 
-### How the two production Skills are checked
+### `verify-work`
 
-Both declare an `agent-harness:policy` marker, but against **different safety profiles**:
-`plan-work` is `read-only`, `init-project` is `approval-gated-mutation`. One flattened
-table would let a Skill that writes files claim it does not. What the profiles share —
-never execute a command, never reach the network — lives in one place and is inherited.
+Runs the project's configured verification gates and reports what happened.
+
+**Bounded command execution.** It is the only Skill that runs a subprocess, and every
+other rule is a limit on that: only gates already written into
+`.agent-harness/config.yaml`, only after approval tied to the exact gate set shown, only
+as argv arrays, only inside the repository, each with a required timeout, sequentially.
+
+It never guesses a command. Reading `package.json` or a Makefile and running what it
+finds is `init-project`'s proposal step, and even there the output only becomes runnable
+once a human writes it into the configuration. No configured gate means `Blocked`, never
+a fallback guess.
+
+`read_only: false` in its contract means only that subprocesses run. It grants no
+authority to edit anything — `modifies_source` and `modifies_config` stay false, and the
+Skill has no write surface at all. This milestone writes no evidence file; results come
+back in the response.
+
+### How the three production Skills are checked
+
+All three declare an `agent-harness:policy` marker, but against **different safety
+profiles**: `plan-work` is `read-only`, `init-project` is `approval-gated-mutation`,
+`verify-work` is `bounded-verification`. One flattened table would let a Skill that
+writes files claim it does not.
+
+`executes_commands` used to be a universal guarantee. It stopped being one the moment a
+verification Skill existed, so it moved into the individual profiles. Keeping it
+universal with an override would have been worse: a guarantee with an exception is a
+default wearing the wrong name. `network_access: false` remains genuinely universal, and
+a test asserts that exactly one profile may execute — so no future Skill acquires that
+power by inheriting it.

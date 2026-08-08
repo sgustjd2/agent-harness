@@ -64,6 +64,8 @@ REQUIRED_REFERENCES = {
     "plan-work": ["references/plan-template.md", "references/quality-checklist.md"],
     "init-project": ["references/config-template.yaml",
                      "references/initialization-checklist.md"],
+    "verify-work": ["references/execution-contract.md",
+                    "references/evidence-template.md"],
 }
 
 # Never inside a Skill: these slices are instruction-only, so there is nothing to

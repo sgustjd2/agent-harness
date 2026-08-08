@@ -15,6 +15,7 @@ import pytest
 import yaml
 
 from conftest import REPO_ROOT
+from _common import FORBIDDEN_PRODUCTION_SKILLS
 from test_plan_work_skill import _frontmatter, _run
 
 pytestmark = pytest.mark.deterministic
@@ -190,9 +191,13 @@ def test_profile_differs_from_plan_work():
     assert SKILL_PROFILE["init-project"] == "approval-gated-mutation"
     assert (SKILL_SAFETY_PROFILES["read-only"]["read_only"] is True
             and SKILL_SAFETY_PROFILES["approval-gated-mutation"]["read_only"] is False)
-    # Shared regardless of profile: neither Skill may execute or reach the network.
+    # Neither of THESE two profiles may execute a command. That is no longer a universal
+    # guarantee -- bounded-verification exists to run configured gates -- so it is
+    # asserted per profile rather than over every profile.
+    for name in ("read-only", "approval-gated-mutation"):
+        assert SKILL_SAFETY_PROFILES[name]["executes_commands"] is False
+    # Still universal, and asserted over everything.
     for profile in SKILL_SAFETY_PROFILES.values():
-        assert profile["executes_commands"] is False
         assert profile["network_access"] is False
 
 
@@ -241,25 +246,24 @@ def test_removing_the_write_surface_fails(plugin_tree):
 
 # ---------------------------------------------------------------- 13-14. allowlist
 
-def test_current_allowlist_is_fixture_plus_two_skills():
-    """13."""
+def test_init_project_is_on_the_allowlist_and_the_tree_matches_it():
+    """13. Derived from the constant, as in the plan-work slice.
+
+    Exact per-milestone membership is asserted once, in the newest slice's file. Stating
+    it here too would mean every future slice edits three files to say one thing.
+    """
     from _common import ALLOWED_SKILLS, IMPLEMENTED_PRODUCTION_SKILLS
 
-    assert IMPLEMENTED_PRODUCTION_SKILLS == ["plan-work", "init-project"]
-    assert set(ALLOWED_SKILLS) == {"m1-discovery-fixture", "plan-work", "init-project"}
+    assert "init-project" in IMPLEMENTED_PRODUCTION_SKILLS
     assert {d.name for d in SKILLS.iterdir() if d.is_dir()} == set(ALLOWED_SKILLS)
 
 
-@pytest.mark.parametrize("name", [
-    "orchestrate", "verify-work", "refine-harness", "apply-refinement", "doctor",
-])
+@pytest.mark.parametrize("name", FORBIDDEN_PRODUCTION_SKILLS)
 def test_unimplemented_production_skills_are_still_rejected(plugin_tree, name):
-    """14. The five remaining names must still fail in the installable root."""
+    """14. Every not-yet-implemented name must still fail in the installable root."""
     import validate_skills
-    from _common import FORBIDDEN_PRODUCTION_SKILLS
 
-    assert name in FORBIDDEN_PRODUCTION_SKILLS
-    assert not (SKILLS / name).exists(), f"{name} must not be implemented in this slice"
+    assert not (SKILLS / name).exists(), f"{name} must not be implemented yet"
 
     bad = plugin_tree / "skills" / name
     bad.mkdir(parents=True)

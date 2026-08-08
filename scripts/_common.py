@@ -282,7 +282,7 @@ PLANNED_PRODUCTION_SKILLS = [
 # body, references and tests exist -- a shipped SKILL.md is host-discoverable whatever
 # it says, so an unimplemented name in the installable root is a product surface with
 # nothing behind it.
-IMPLEMENTED_PRODUCTION_SKILLS = ["plan-work", "init-project"]   # M2 slices 1-2
+IMPLEMENTED_PRODUCTION_SKILLS = ["plan-work", "init-project", "verify-work"]  # M2 1-3
 
 # Still unimplemented, and therefore still rejected in the installable root.
 FORBIDDEN_PRODUCTION_SKILLS = [
@@ -299,7 +299,7 @@ ALLOWED_SKILLS = [DISCOVERY_FIXTURE_SKILL, *IMPLEMENTED_PRODUCTION_SKILLS]
 # match side effects: the fixture does nothing, so being selectable buys nothing;
 # init-project writes files, so it must start only because someone named it. plan-work
 # is read-only, so implicit selection costs a document, not a mutation.
-IMPLICIT_INVOCATION_MUST_BE_OFF = [DISCOVERY_FIXTURE_SKILL, "init-project"]
+IMPLICIT_INVOCATION_MUST_BE_OFF = [DISCOVERY_FIXTURE_SKILL, "init-project", "verify-work"]
 
 # --------------------------------------------------------------------------
 # Skill safety profiles
@@ -309,10 +309,15 @@ IMPLICIT_INVOCATION_MUST_BE_OFF = [DISCOVERY_FIXTURE_SKILL, "init-project"]
 # mutation-capable one make different promises, and collapsing them would either let a
 # writer claim read-only or force a planner to declare approval fields it never uses.
 
-# True for every production Skill regardless of profile. Kept separate so a later
-# mutation-capable Skill inherits these without restating them.
+# True for every production Skill regardless of profile.
+#
+# `executes_commands` USED to live here. It stopped being universal the moment a
+# verification Skill existed: running the user's own configured checks is that Skill's
+# entire purpose. Leaving the field here and letting one profile override it would have
+# been worse than moving it -- a "universal guarantee" with an exception is not a
+# guarantee, it is a default wearing the wrong name. Each profile now states its own
+# execution posture explicitly, so no Skill inherits a promise it does not keep.
 UNIVERSAL_SKILL_POLICY = {
-    "executes_commands": False,
     "network_access": False,
 }
 
@@ -321,6 +326,7 @@ SKILL_SAFETY_PROFILES = {
     "read-only": {
         **UNIVERSAL_SKILL_POLICY,
         "read_only": True,
+        "executes_commands": False,
         "modifies_source": False,
         "modifies_config": False,
         "spawns_agents": False,
@@ -337,6 +343,7 @@ SKILL_SAFETY_PROFILES = {
     "approval-gated-mutation": {
         **UNIVERSAL_SKILL_POLICY,
         "read_only": False,
+        "executes_commands": False,
         "requires_explicit_invocation": True,
         "requires_mutation_approval": True,
         "installs_packages": False,
@@ -346,12 +353,41 @@ SKILL_SAFETY_PROFILES = {
         "deletes_preexisting_content": False,
         "may_rollback_current_attempt": True,
     },
+    # Runs the user's own configured verification gates, and nothing else.
+    #
+    # `read_only: false` here means only "subprocesses run, so this is not
+    # side-effect-free". It grants no authority to edit source or configuration --
+    # `modifies_source` and `modifies_config` stay false, and there is no write surface
+    # at all. The dangerous power in this profile is execution, so the constraint that
+    # matters is `executes_configured_gates_only`: the command set comes from
+    # config.yaml, never from inference about the repository.
+    "bounded-verification": {
+        **UNIVERSAL_SKILL_POLICY,
+        "read_only": False,
+        "executes_commands": True,
+        "requires_explicit_invocation": True,
+        "requires_execution_approval": True,
+        "executes_configured_gates_only": True,
+        "modifies_source": False,
+        "modifies_config": False,
+        "spawns_agents": False,
+        "installs_packages": False,
+        "modifies_user_settings": False,
+        "command_definition": "argv-array",
+        "verification_default": "Not Run",
+        "evidence_persistence": "response-only",
+    },
 }
 
 SKILL_PROFILE = {
     "plan-work": "read-only",
     "init-project": "approval-gated-mutation",
+    "verify-work": "bounded-verification",
 }
+
+# Only this profile may run a subprocess. Asserted in tests so a future profile cannot
+# acquire execution by inheritance without someone deciding to grant it.
+PROFILES_PERMITTING_EXECUTION = ["bounded-verification"]
 
 # A mutation-capable Skill must also declare its entire write surface. Anything outside
 # these roots is a path the user never agreed to.
