@@ -1,0 +1,15 @@
+# Invocation policy for plan-work.
+#
+# Implicit invocation is ENABLED here, unlike the M1 discovery fixture. The reasoning
+# is the same in both cases, applied to different Skills: a Skill should be reachable
+# exactly as far as its side effects justify. The fixture does nothing, so it is kept
+# inert. plan-work is read-only -- it writes no source, runs no command, and creates a
+# file only when a user explicitly asks -- so a model selecting it for "plan this
+# feature" costs the user a document, not a change to their repository.
+#
+# Only the documented policy field is set. No tool grants, dependencies, connectors, or
+# mutation permissions belong here: this file controls WHETHER the Skill may start, not
+# what it is allowed to do once running.
+
+policy:
+  allow_implicit_invocation: true

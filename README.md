@@ -10,14 +10,20 @@ accumulated evidence into reviewable proposals that apply only when you say so.
 
 ---
 
-## Status: M1.4A — scaffold complete, host verification pending
+## Status: M2 begun — first production Skill, host verification still pending
 
-**This repository does nothing useful yet.** M1 built the repository skeleton and the
-validation pipeline; M1.1 corrected it; M1.2–M1.3.1 verified and corrected the packaging
-contract against real hosts. M1.4A established that Claude Code actually **loads** the
-plugin and **discovers** its Skill.
+**M2 implementation has begun.** M1 built the repository skeleton and the validation
+pipeline, and verified the packaging contract against real hosts. M2 adds the first
+production Skill.
 
-**M2 has not begun.**
+**`plan-work` is the first production Skill.** It is **read-only by default**: it
+produces plans, and it does not implement them. It writes no source, changes no
+configuration, runs no command, and creates a file only when you explicitly ask it to
+save a plan.
+
+**This is not a stable release.** Remaining M1 host verification is still a release
+blocker -- Codex Skill discovery, the ChatGPT Desktop surfaces, and the hook and
+helper-script runtime experiments are unfinished. Treat `plan-work` as experimental.
 
 | Milestone | Content | State |
 | :--- | :--- | :--- |
@@ -26,16 +32,17 @@ plugin and **discovers** its Skill.
 | M1.1 | scaffold correction and scope audit | done |
 | M1.2 | real-host verification | done |
 | M1.3 / M1.3.1 | OpenAI marketplace contract remediation and evidence correction | done |
-| **M1.4A** | **Claude non-interactive load and component discovery** | **current** |
+| M1.4A | Claude non-interactive load and component discovery | done |
 | M1.4B | Codex Skill discovery, ChatGPT Desktop, hooks, helper execution | **not started** |
-| M2 | shared Skill bodies | **not started** |
+| **M2** | **shared Skill bodies — `plan-work` first** | **in progress** |
 | M3–M8 | adapters, state, refinement, pilot, release | not started |
 
 **Exit criteria: 14 of 17 met.** The three unmet criteria all need host access that this
 phase deliberately did not take — see [`docs/m1-traceability.md`](docs/m1-traceability.md).
 
-There are **no production Skills**. The installable plugin root contains exactly one
-compatibility fixture Skill, which does nothing by design.
+The installable plugin root contains the compatibility fixture and exactly one
+production Skill, `plan-work`. The other six planned Skills are **not implemented**, and
+validation rejects their names until they are.
 
 ---
 
@@ -49,7 +56,8 @@ marketplace/marketplace.source.json   canonical catalog source -- the only hand-
 plugins/agent-harness/                the installable plugin. Self-contained.
   .claude-plugin/plugin.json            Claude manifest
   .codex-plugin/plugin.json             Codex manifest, "skills": "./skills/"
-  skills/m1-discovery-fixture/          the ONLY Skill here during M1
+  skills/m1-discovery-fixture/          compatibility fixture, inert by design
+  skills/plan-work/                     first production Skill, read-only
   core/schemas/                         five packaging schemas
   core/schemas/state/                   state schemas -- NOT packaging evidence
   adapters/{claude,codex}/              host integration + experiment records
@@ -150,7 +158,10 @@ it is deliberately narrower than a vendor contract, it says so in a `$comment`.
 `displayName`, descriptions and owner names are free-form labels. M1.3 removed the
 identifier patterns in error; M1.3.1 restored them.
 
-**M2 has not begun.**
+**M2 has begun, with one Skill.** `plan-work` is implemented and validated; the other
+six planned Skills are not, and their names are still rejected in the installable root.
+A shipped `SKILL.md` is host-discoverable whatever its body says, so an empty
+placeholder would be a product surface with nothing behind it.
 
 ---
 

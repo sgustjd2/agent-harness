@@ -273,13 +273,50 @@ def load_json(path, report: Report, code: str = "JSON_INVALID"):
 # --------------------------------------------------------------------------
 
 # M1.1: no production Skill may exist under the installable plugin root.
-FORBIDDEN_PRODUCTION_SKILLS = [
+PLANNED_PRODUCTION_SKILLS = [
     "init-project", "plan-work", "orchestrate",
     "verify-work", "refine-harness", "apply-refinement", "doctor",
 ]
 
+# Production Skills actually implemented, by milestone. A name moves here only when its
+# body, references and tests exist -- a shipped SKILL.md is host-discoverable whatever
+# it says, so an unimplemented name in the installable root is a product surface with
+# nothing behind it.
+IMPLEMENTED_PRODUCTION_SKILLS = ["plan-work"]          # M2 slice 1
+
+# Still unimplemented, and therefore still rejected in the installable root.
+FORBIDDEN_PRODUCTION_SKILLS = [
+    name for name in PLANNED_PRODUCTION_SKILLS if name not in IMPLEMENTED_PRODUCTION_SKILLS
+]
+
 # The single compatibility fixture Skill permitted in the installable root.
 DISCOVERY_FIXTURE_SKILL = "m1-discovery-fixture"
+
+# Every Skill directory permitted in the installable root right now.
+ALLOWED_SKILLS = [DISCOVERY_FIXTURE_SKILL, *IMPLEMENTED_PRODUCTION_SKILLS]
+
+# Skills whose invocation policy must keep implicit invocation OFF. The fixture does
+# nothing, so being reachable by a model buys nothing and risks noise. plan-work is
+# read-only, so implicit selection costs a document, not a mutation.
+IMPLICIT_INVOCATION_MUST_BE_OFF = [DISCOVERY_FIXTURE_SKILL]
+
+# Structural policy marker embedded in a production SKILL.md body. Parsed as YAML, not
+# grepped: prose like "this Skill never runs commands" must not be mistaken for either
+# a promise or a violation, and only a declared block can be checked exactly.
+POLICY_MARKER_OPEN = "<!-- agent-harness:policy"
+POLICY_MARKER_CLOSE = "-->"
+
+
+def extract_policy_marker(text: str):
+    """Return the raw YAML inside a SKILL.md policy marker, or None if absent."""
+    start = text.find(POLICY_MARKER_OPEN)
+    if start < 0:
+        return None
+    body_start = start + len(POLICY_MARKER_OPEN)
+    end = text.find(POLICY_MARKER_CLOSE, body_start)
+    if end < 0:
+        return None
+    return text[body_start:end]
 
 # FR-025 / DEC-C25: canonical cross-host frontmatter minimum set.
 SKILL_FRONTMATTER_REQUIRED = {"name", "description"}

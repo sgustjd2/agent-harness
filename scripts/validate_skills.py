@@ -4,11 +4,18 @@
 Frontmatter is parsed by PyYAML (yaml.safe_load) after boundary extraction, so a
 malformed block fails with a real YAML error rather than a subset parser's guess.
 
-Boundary rules enforced here (M1.1 Step 7):
-  - no production Skill name may exist under the installable plugin root
-  - exactly one compatibility fixture Skill, m1-discovery-fixture
-  - it must carry agents/openai.yaml with implicit invocation disabled
+Boundary rules enforced here:
+  - only Skills on the current milestone allowlist may exist in the installable root
+    (M1.1 Step 7, widened once in M2 to admit the implemented plan-work)
+  - every still-unimplemented production Skill name is rejected
+  - the compatibility fixture must keep implicit invocation disabled
   - no production hook directory in the installable root
+
+Implemented production Skills additionally declare a machine-checkable safety contract
+in their body. That contract is parsed as YAML from an explicit marker rather than
+grepped out of prose: a read-only Skill's body legitimately contains sentences like
+"it never runs commands", and a substring check cannot tell that apart from a promise
+to do so. The marker is the claim; the prose is only for the reader.
 """
 
 from __future__ import annotations
@@ -21,13 +28,17 @@ import yaml
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from _authoritative import load_frontmatter  # noqa: E402
 from _common import (  # noqa: E402
+    ALLOWED_SKILLS,
     DISCOVERY_FIXTURE_SKILL,
     FORBIDDEN_PRODUCTION_SKILLS,
+    IMPLEMENTED_PRODUCTION_SKILLS,
+    IMPLICIT_INVOCATION_MUST_BE_OFF,
     PLUGIN_ROOT,
     SKILL_FRONTMATTER_OPTIONAL,
     SKILL_FRONTMATTER_REQUIRED,
     FrontmatterError,
     Report,
+    extract_policy_marker,
     main,
     skill_dirs,
 )
@@ -35,9 +46,42 @@ from _common import (  # noqa: E402
 DESCRIPTION_MAX = 1536
 ALLOWED = SKILL_FRONTMATTER_REQUIRED | SKILL_FRONTMATTER_OPTIONAL
 
-# Component directories that must not appear in the installable plugin root.
+# Component directories that must not appear in the installable plugin ROOT. Note this
+# is the root-level `agents/` (Claude subagents), not `skills/<name>/agents/`, which is
+# where a Skill's own invocation policy legitimately lives.
 FORBIDDEN_COMPONENTS = ["hooks", "agents", "workflows", "monitors", "scripts",
                         ".mcp.json", ".app.json", ".lsp.json", "settings.json"]
+
+# Required inside every implemented production Skill.
+REQUIRED_REFERENCES = ["references/plan-template.md", "references/quality-checklist.md"]
+
+# Never inside a Skill: this slice is instruction-only, so there is nothing to execute
+# and nothing to fetch.
+FORBIDDEN_SKILL_SUBDIRS = ["scripts", "assets", "bin", "node_modules"]
+
+# The safety contract an implemented, read-only production Skill must declare.
+REQUIRED_POLICY = {
+    "read_only": True,
+    "modifies_source": False,
+    "modifies_config": False,
+    "executes_commands": False,
+    "spawns_agents": False,
+    "network_access": False,
+    "verification_default": "Not Run",
+    "persistence": "on-request-only",
+}
+
+# A fenced shell block is a copyable command, which is structural rather than a matter
+# of wording -- unlike prose, which may safely discuss commands it must not run.
+SHELL_FENCES = ["```bash", "```sh", "```shell", "```console", "```powershell", "```zsh"]
+
+# Files that would make a Skill depend on something at runtime.
+DEPENDENCY_MANIFESTS = ["requirements.txt", "package.json", "pyproject.toml",
+                        "Gemfile", "go.mod", "pom.xml"]
+
+# Keys that would turn the invocation-policy file into a permission grant.
+FORBIDDEN_POLICY_KEYS = ["tools", "dependencies", "connectors", "permissions",
+                         "mcp", "network", "mutations", "allowed-tools"]
 
 
 def check(plugin_root: pathlib.Path = PLUGIN_ROOT) -> int:
@@ -66,16 +110,17 @@ def check(plugin_root: pathlib.Path = PLUGIN_ROOT) -> int:
                         "host-discoverable regardless of body text, so it must not exist "
                         "in the installable root during M1")
 
-    # ---- boundary: exactly one fixture Skill --------------------------------
-    if DISCOVERY_FIXTURE_SKILL not in names:
-        report.fail("FILE_MISSING", plugin_root / "skills" / DISCOVERY_FIXTURE_SKILL,
-                    "the single M1 compatibility fixture Skill is missing")
-    extras = [n for n in names if n != DISCOVERY_FIXTURE_SKILL
+    # ---- boundary: the milestone allowlist ----------------------------------
+    for required in ALLOWED_SKILLS:
+        if required not in names:
+            report.fail("FILE_MISSING", plugin_root / "skills" / required,
+                        f"{required!r} is on the current milestone allowlist but is missing")
+    extras = [n for n in names if n not in ALLOWED_SKILLS
               and n not in FORBIDDEN_PRODUCTION_SKILLS]
     for extra in extras:
         report.fail("FORBIDDEN_COMPONENT_IN_ROOT", plugin_root / "skills" / extra,
-                    f"unexpected Skill {extra!r}: M1 permits only "
-                    f"{DISCOVERY_FIXTURE_SKILL!r} in the installable root")
+                    f"unexpected Skill {extra!r}: the installable root currently permits "
+                    f"only {ALLOWED_SKILLS}")
 
     # ---- per-Skill metadata -------------------------------------------------
     for d in dirs:
@@ -126,9 +171,9 @@ def check(plugin_root: pathlib.Path = PLUGIN_ROOT) -> int:
 
         # ---- invocation policy ---------------------------------------------
         policy_path = d / "agents" / "openai.yaml"
-        if d.name == DISCOVERY_FIXTURE_SKILL and not policy_path.is_file():
+        if d.name in ALLOWED_SKILLS and not policy_path.is_file():
             report.fail("POLICY_FILE_MISSING", policy_path,
-                        "the discovery fixture must ship agents/openai.yaml")
+                        f"{d.name!r} must ship agents/openai.yaml")
         if policy_path.is_file():
             try:
                 policy = yaml.safe_load(policy_path.read_text(encoding="utf-8"))
@@ -136,14 +181,96 @@ def check(plugin_root: pathlib.Path = PLUGIN_ROOT) -> int:
                 report.fail("SKILL_FRONTMATTER_MALFORMED", policy_path,
                             f"PyYAML rejected the policy file: {exc}")
             else:
-                value = ((policy or {}).get("policy") or {}).get("allow_implicit_invocation")
-                if value is not False:
-                    report.fail("POLICY_IMPLICIT_INVOCATION_ENABLED", policy_path,
-                                f"policy.allow_implicit_invocation must be false, "
-                                f"got {value!r}")
+                policy = policy or {}
+                value = (policy.get("policy") or {}).get("allow_implicit_invocation")
+                if d.name in IMPLICIT_INVOCATION_MUST_BE_OFF:
+                    if value is not False:
+                        report.fail("POLICY_IMPLICIT_INVOCATION_ENABLED", policy_path,
+                                    f"policy.allow_implicit_invocation must be false for "
+                                    f"{d.name!r}, got {value!r}")
+                elif not isinstance(value, bool):
+                    report.fail("POLICY_INVOCATION_UNDECLARED", policy_path,
+                                f"policy.allow_implicit_invocation must be declared as a "
+                                f"boolean, got {value!r}")
+                # The file decides WHETHER the Skill may start, never what it may do.
+                for key in FORBIDDEN_POLICY_KEYS:
+                    if key in policy or key in (policy.get("policy") or {}):
+                        report.fail("POLICY_GRANT_NOT_PERMITTED", policy_path,
+                                    f"{key!r} must not appear in an invocation-policy "
+                                    "file: it controls invocation, not permissions")
+
+        if d.name in IMPLEMENTED_PRODUCTION_SKILLS:
+            _check_production_skill(d, skill_md, report)
 
     report.note("frontmatter parsed by PyYAML (yaml.safe_load)")
+    report.note(f"installable-root Skill allowlist: {ALLOWED_SKILLS}; still rejected: "
+                f"{FORBIDDEN_PRODUCTION_SKILLS}")
     return report.finish()
+
+
+def _check_production_skill(d: pathlib.Path, skill_md: pathlib.Path, report: Report) -> None:
+    """Structural contract for an implemented, read-only production Skill."""
+    body = skill_md.read_text(encoding="utf-8")
+
+    # ---- declared safety contract ------------------------------------------
+    raw = extract_policy_marker(body)
+    if raw is None:
+        report.fail("SKILL_POLICY_MARKER_MISSING", skill_md,
+                    "an implemented production Skill must declare a machine-checkable "
+                    "safety contract in an agent-harness:policy marker")
+    else:
+        try:
+            declared = yaml.safe_load(raw)
+        except yaml.YAMLError as exc:
+            report.fail("SKILL_POLICY_MARKER_MALFORMED", skill_md,
+                        f"PyYAML rejected the policy marker: {exc}")
+        else:
+            if not isinstance(declared, dict):
+                report.fail("SKILL_POLICY_MARKER_MALFORMED", skill_md,
+                            f"policy marker must be a mapping, got {type(declared).__name__}")
+            else:
+                for key, expected in REQUIRED_POLICY.items():
+                    if key not in declared:
+                        report.fail("SKILL_POLICY_MARKER_MISSING", skill_md,
+                                    f"policy marker omits {key!r}")
+                    elif declared[key] != expected:
+                        code = ("SKILL_VERIFICATION_DEFAULT_INVALID"
+                                if key == "verification_default"
+                                else "SKILL_MUTATION_NOT_PERMITTED")
+                        report.fail(code, skill_md,
+                                    f"policy {key!r} must be {expected!r} for a read-only "
+                                    f"Skill, got {declared[key]!r}")
+
+    # ---- no executable command block ---------------------------------------
+    # Prose may discuss commands; a fenced shell block is a copyable instruction.
+    for fence in SHELL_FENCES:
+        if fence in body:
+            report.fail("SKILL_COMMAND_BLOCK_PRESENT", skill_md,
+                        f"{fence!r} fenced block found: a read-only Skill must not carry "
+                        "an executable command block, only proposed commands as text")
+
+    # ---- required references, contained and dependency-free -----------------
+    root = d.resolve()
+    for rel in REQUIRED_REFERENCES:
+        target = d / rel
+        if not target.is_file():
+            report.fail("SKILL_REFERENCE_MISSING", target,
+                        f"{rel!r} is required by an implemented production Skill")
+            continue
+        if not str(target.resolve()).startswith(str(root)):
+            report.fail("PATH_ESCAPES_PLUGIN_ROOT", target,
+                        f"{rel!r} resolves outside the Skill root")
+
+    for sub in FORBIDDEN_SKILL_SUBDIRS:
+        if (d / sub).exists():
+            report.fail("SKILL_EXECUTABLE_DIR_PRESENT", d / sub,
+                        f"{sub!r} must not exist inside a Skill: this milestone ships "
+                        "instruction-only Skills with nothing to execute")
+
+    for manifest in DEPENDENCY_MANIFESTS:
+        if (d / manifest).exists():
+            report.fail("SKILL_RUNTIME_DEPENDENCY", d / manifest,
+                        f"{manifest!r} would give the Skill a runtime dependency")
 
 
 if __name__ == "__main__":
