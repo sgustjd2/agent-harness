@@ -30,14 +30,16 @@ installs_packages: false
 modifies_user_settings: false
 overwrites_existing_files: false
 idempotent: true
+deletes_preexisting_content: false
+may_rollback_current_attempt: true
 allowed_path_roots:
   - .agent-harness/
   - CLAUDE.md
   - AGENTS.md
 -->
 
-Those three roots are the entire write surface. `CLAUDE.md` and `AGENTS.md` are
-**append-only**, and only inside the marker block.
+Those three roots are the entire write surface. In `CLAUDE.md` and `AGENTS.md` the only
+writable region is the **managed-marker-block**; everything outside it is immutable.
 
 ## Two phases, always
 
@@ -71,9 +73,27 @@ Read only. No file is created, modified, or deleted; no command is executed.
    conflicting configuration silently.
 5. Report every path as created, unchanged, skipped, conflicted, or failed.
 
-**Partial initialization is a defect.** If a required file cannot be written, remove
-what this run created, report the cause and the manual steps, and do not describe the
-result as initialized.
+## Failure and rollback
+
+**Partial initialization is a defect.** When Phase B fails partway, the boundary is
+what the *current attempt* created — not what was already there.
+
+1. **Never delete or restore any file or content that existed before this Phase B
+   attempt.** Pre-existing user content is out of scope for cleanup, always. If a file
+   was there when the attempt started, the attempt does not remove it, truncate it, or
+   revert it to an earlier version.
+2. **A best-effort rollback may withdraw only what this attempt created**: the exact
+   files it wrote, and the exact managed-marker-block content it inserted. Nothing else.
+3. **If complete rollback is impossible**, stop and report the remaining partial state —
+   naming each file and block that survives — together with the exact manual cleanup
+   steps to finish it.
+4. **Never report initialization as successful while partial state remains.** A run that
+   left files behind and could not withdraw them did not succeed; say so plainly and
+   list what is there.
+
+"Nothing is ever deleted" and "clean up after a failed attempt" only look like a
+contradiction. The line is ownership: an attempt may withdraw its own writes, and may
+never touch what it found.
 
 ## What gets created
 
@@ -95,25 +115,37 @@ If the user sets `runs.commit_evidence: true`, drop `runs/` from that ignore fil
 tell them the tradeoff: run output is the most likely place for something sensitive to
 end up in history.
 
-## Host instruction file
+## Host instruction file — the managed-marker-block
 
-Add a marker block to `CLAUDE.md` (Claude Code) and `AGENTS.md` (Codex). If both exist,
-add the same block to both. If neither exists, create the one matching the host.
-
-The block is delimited exactly:
+`CLAUDE.md` (Claude Code) and `AGENTS.md` (Codex) are **not** generally editable. The
+only region this Skill may write is the **managed-marker-block**, delimited exactly:
 
 `<!-- BEGIN agent-harness -->` … `<!-- END agent-harness -->`
 
-Rules:
+**All content outside that block is immutable** — never rewritten, reordered,
+reformatted, or removed. This is not "append-only", because the block's own contents may
+legitimately be replaced; it is a single owned region inside a file the user owns.
 
-- **Append only.** Existing content is never rewritten, reordered, or reformatted.
-- If a marker block already exists, replace **only what is between the markers**, and
-  only when its content would actually change. Never add a second block.
-- Keep the block **under 2 KiB**. Codex concatenates `AGENTS.md` files from the Git root
-  down, against a byte budget; a large block spends someone else's budget.
-- The block holds invocation guidance and a summary of the `.agent-harness/` layout —
-  **not** the workflow itself. Duplicating Skill bodies into an instruction file creates
-  a second copy that drifts.
+| Situation | Action |
+| :--- | :--- |
+| no block exists | append **one** block at the end of the file |
+| exactly one block exists | replace **only the content inside it**, and only when that content would actually change |
+| malformed, nested, duplicated, or unmatched markers | **conflict** — report it, change nothing |
+
+Never create a second block. If a `BEGIN` has no matching `END`, the markers are nested,
+or more than one block is present, the file's ownership is ambiguous — resolving it by
+guessing risks destroying user content, so report the conflict and leave the file alone.
+
+Creating a missing `CLAUDE.md` or `AGENTS.md` remains allowed, following the host rule
+above: Claude Code gets `CLAUDE.md`, Codex gets `AGENTS.md`, and if both files exist both
+receive the same block.
+
+Keep the block **under 2 KiB**. Codex concatenates `AGENTS.md` files from the Git root
+down, against a byte budget; a large block spends someone else's budget.
+
+The block holds invocation guidance and a summary of the `.agent-harness/` layout —
+**not** the workflow itself. Duplicating Skill bodies into an instruction file creates a
+second copy that drifts.
 
 ## Verification gates
 
@@ -145,8 +177,10 @@ Re-running against an initialized repository must produce no diff.
 
 - A file that exists and is valid is reported **unchanged**, not rewritten.
 - Only missing approved files are created.
-- Sections are never duplicated; marker blocks are never stacked.
-- User content is never reset, and nothing is ever deleted.
+- Sections are never duplicated; managed-marker-blocks are never stacked.
+- User content is never reset, and no pre-existing file or content is ever deleted. The
+  single exception is narrow and stated above: a failed Phase B attempt may withdraw the
+  files and block content **that same attempt** created.
 
 The check is simple: run it twice, and the second run creates nothing.
 

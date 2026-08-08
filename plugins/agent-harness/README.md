@@ -93,9 +93,22 @@ Its declared write surface is the whole of what it may touch:
 | Root | Access |
 | :--- | :--- |
 | `.agent-harness/` | create |
-| `CLAUDE.md`, `AGENTS.md` | **append only**, inside the marker block |
+| `CLAUDE.md`, `AGENTS.md` | the **managed-marker-block** only; everything outside it is immutable |
 
-It never overwrites an existing non-empty file, never deletes, never touches `.git/`,
+**The managed-marker-block.** `<!-- BEGIN agent-harness -->` … `<!-- END agent-harness -->`
+is the single owned region inside a file the user owns. With no block present, exactly
+one is appended at the end; with one present, only its inner content is replaced, and
+only when that content would change. Markers that are malformed, nested, duplicated or
+unmatched are a **conflict** — reported, never resolved by guessing. This is not
+"append-only", because the block's own contents may legitimately be replaced.
+
+**Rollback is bounded by ownership.** Nothing that existed before a Phase B attempt is
+ever deleted or restored. A failed attempt may make a best-effort withdrawal of the
+exact files and block content *that attempt* created, and nothing else. If it cannot
+finish, it reports the remaining partial state and the manual cleanup steps — and does
+not call the result initialized.
+
+It never overwrites an existing non-empty file, never touches `.git/`,
 never writes to user scope (`~/.claude/`, `~/.codex/`, `~/.agents/`), and never executes
 the verification commands it detects — detection is a hypothesis that a tool exists, and
 running it to find out is precisely the side effect this Skill must not have.

@@ -31,14 +31,17 @@ agree to.
 
 ## While writing
 
-- [ ] Only paths under `.agent-harness/`, plus append-only marker blocks in `CLAUDE.md`
-      and `AGENTS.md`, were touched.
+- [ ] Only paths under `.agent-harness/`, plus the managed-marker-block in `CLAUDE.md`
+      and `AGENTS.md`, were touched. **Everything outside that block is immutable.**
 - [ ] **No existing non-empty file was overwritten.**
 - [ ] No configuration was silently merged.
-- [ ] No marker block was duplicated; an existing block was updated in place, and only
-      when its content would actually change.
-- [ ] The marker block stays under 2 KiB.
-- [ ] Nothing was deleted.
+- [ ] No managed-marker-block was duplicated. With no block present, exactly one was
+      appended at the end; with one present, only its inner content was replaced, and
+      only when that content would actually change.
+- [ ] Markers that are malformed, nested, duplicated, or unmatched were treated as a
+      **conflict** and left untouched — ambiguous ownership is not resolved by guessing.
+- [ ] The managed-marker-block stays under 2 KiB.
+- [ ] **No pre-existing file or content was deleted.**
 - [ ] **Git ignore policy**: ignores were written to `.agent-harness/.gitignore`, the
       self-contained file, and the repository's own root `.gitignore` was left alone.
       Its four lines are `runs/`, `proposals/`, `*.tmp`, `.migration-backup/` — with
@@ -62,6 +65,17 @@ agree to.
 
 - [ ] Every path is reported as created, unchanged, skipped, conflicted, or failed.
 - [ ] Conflicts name the file and why, not just a count.
-- [ ] **Success is not claimed when any required file failed to write.** A partial
-      initialization is a defect: clean up what this run created, report the cause and
-      the manual steps, and say the repository is not initialized.
+- [ ] **Success is not claimed when any required file failed to write**, and not while
+      any partial state remains. A partial initialization is a defect.
+
+## On failure
+
+- [ ] Rollback withdrew **only** the exact files and managed-marker-block content this
+      Phase B attempt created.
+- [ ] **No file or content that existed before this attempt was deleted or restored.**
+      What was already there is out of scope for cleanup, always.
+- [ ] If complete rollback was impossible, the remaining partial state is reported by
+      name, with the exact manual cleanup steps to finish it.
+- [ ] The result says the repository is **not** initialized whenever partial state
+      survives — a run that left files behind and could not withdraw them did not
+      succeed.
