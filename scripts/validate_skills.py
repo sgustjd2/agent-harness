@@ -6,7 +6,7 @@ malformed block fails with a real YAML error rather than a subset parser's guess
 
 Boundary rules enforced here:
   - only Skills on the current milestone allowlist may exist in the installable root
-    (M1.1 Step 7, widened once in M2 to admit the implemented plan-work)
+    (M1.1 Step 7; widened one Skill at a time in M2 as each is actually implemented)
   - every still-unimplemented production Skill name is rejected
   - the compatibility fixture must keep implicit invocation disabled
   - no production hook directory in the installable root
@@ -29,16 +29,22 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from _authoritative import load_frontmatter  # noqa: E402
 from _common import (  # noqa: E402
     ALLOWED_SKILLS,
+    ALLOWED_WRITE_PATH_ROOTS,
     DISCOVERY_FIXTURE_SKILL,
     FORBIDDEN_PRODUCTION_SKILLS,
+    FORBIDDEN_WRITE_PATH_PREFIXES,
     IMPLEMENTED_PRODUCTION_SKILLS,
     IMPLICIT_INVOCATION_MUST_BE_OFF,
+    PROFILES_REQUIRING_PATH_ROOTS,
+    SKILL_PROFILE,
+    SKILL_SAFETY_PROFILES,
     PLUGIN_ROOT,
     SKILL_FRONTMATTER_OPTIONAL,
     SKILL_FRONTMATTER_REQUIRED,
     FrontmatterError,
     Report,
     extract_policy_marker,
+    path_hygiene_issues,
     main,
     skill_dirs,
 )
@@ -52,24 +58,17 @@ ALLOWED = SKILL_FRONTMATTER_REQUIRED | SKILL_FRONTMATTER_OPTIONAL
 FORBIDDEN_COMPONENTS = ["hooks", "agents", "workflows", "monitors", "scripts",
                         ".mcp.json", ".app.json", ".lsp.json", "settings.json"]
 
-# Required inside every implemented production Skill.
-REQUIRED_REFERENCES = ["references/plan-template.md", "references/quality-checklist.md"]
-
-# Never inside a Skill: this slice is instruction-only, so there is nothing to execute
-# and nothing to fetch.
-FORBIDDEN_SKILL_SUBDIRS = ["scripts", "assets", "bin", "node_modules"]
-
-# The safety contract an implemented, read-only production Skill must declare.
-REQUIRED_POLICY = {
-    "read_only": True,
-    "modifies_source": False,
-    "modifies_config": False,
-    "executes_commands": False,
-    "spawns_agents": False,
-    "network_access": False,
-    "verification_default": "Not Run",
-    "persistence": "on-request-only",
+# Every implemented production Skill ships two references. The filenames differ per
+# Skill because the documents do -- a plan template is not an initialization checklist.
+REQUIRED_REFERENCES = {
+    "plan-work": ["references/plan-template.md", "references/quality-checklist.md"],
+    "init-project": ["references/config-template.yaml",
+                     "references/initialization-checklist.md"],
 }
+
+# Never inside a Skill: these slices are instruction-only, so there is nothing to
+# execute and nothing to fetch.
+FORBIDDEN_SKILL_SUBDIRS = ["scripts", "assets", "bin", "node_modules"]
 
 # A fenced shell block is a copyable command, which is structural rather than a matter
 # of wording -- unlike prose, which may safely discuss commands it must not run.
@@ -209,8 +208,20 @@ def check(plugin_root: pathlib.Path = PLUGIN_ROOT) -> int:
 
 
 def _check_production_skill(d: pathlib.Path, skill_md: pathlib.Path, report: Report) -> None:
-    """Structural contract for an implemented, read-only production Skill."""
+    """Structural contract for an implemented production Skill.
+
+    The expected contract comes from the Skill's safety profile, because "safe" differs
+    by kind: a planner promises it writes nothing, while an initializer promises it
+    writes only what was approved. One shared table would let a writer claim read-only.
+    """
     body = skill_md.read_text(encoding="utf-8")
+    profile_name = SKILL_PROFILE.get(d.name)
+    if profile_name is None:
+        report.fail("SKILL_PROFILE_UNDECLARED", skill_md,
+                    f"{d.name!r} is implemented but has no safety profile; add one to "
+                    "SKILL_PROFILE before shipping it")
+        return
+    expected_policy = SKILL_SAFETY_PROFILES[profile_name]
 
     # ---- declared safety contract ------------------------------------------
     raw = extract_policy_marker(body)
@@ -229,17 +240,19 @@ def _check_production_skill(d: pathlib.Path, skill_md: pathlib.Path, report: Rep
                 report.fail("SKILL_POLICY_MARKER_MALFORMED", skill_md,
                             f"policy marker must be a mapping, got {type(declared).__name__}")
             else:
-                for key, expected in REQUIRED_POLICY.items():
+                for key, expected in expected_policy.items():
                     if key not in declared:
                         report.fail("SKILL_POLICY_MARKER_MISSING", skill_md,
-                                    f"policy marker omits {key!r}")
+                                    f"policy marker omits {key!r} (profile {profile_name!r})")
                     elif declared[key] != expected:
                         code = ("SKILL_VERIFICATION_DEFAULT_INVALID"
                                 if key == "verification_default"
                                 else "SKILL_MUTATION_NOT_PERMITTED")
                         report.fail(code, skill_md,
-                                    f"policy {key!r} must be {expected!r} for a read-only "
-                                    f"Skill, got {declared[key]!r}")
+                                    f"policy {key!r} must be {expected!r} under profile "
+                                    f"{profile_name!r}, got {declared[key]!r}")
+                if profile_name in PROFILES_REQUIRING_PATH_ROOTS:
+                    _check_write_path_roots(d, skill_md, declared, report)
 
     # ---- no executable command block ---------------------------------------
     # Prose may discuss commands; a fenced shell block is a copyable instruction.
@@ -251,7 +264,7 @@ def _check_production_skill(d: pathlib.Path, skill_md: pathlib.Path, report: Rep
 
     # ---- required references, contained and dependency-free -----------------
     root = d.resolve()
-    for rel in REQUIRED_REFERENCES:
+    for rel in REQUIRED_REFERENCES.get(d.name, []):
         target = d / rel
         if not target.is_file():
             report.fail("SKILL_REFERENCE_MISSING", target,
@@ -271,6 +284,39 @@ def _check_production_skill(d: pathlib.Path, skill_md: pathlib.Path, report: Rep
         if (d / manifest).exists():
             report.fail("SKILL_RUNTIME_DEPENDENCY", d / manifest,
                         f"{manifest!r} would give the Skill a runtime dependency")
+
+
+def _check_write_path_roots(d: pathlib.Path, skill_md: pathlib.Path,
+                            declared: dict, report: Report) -> None:
+    """A mutation-capable Skill must declare its entire write surface, and keep it safe."""
+    roots = declared.get("allowed_path_roots")
+    if not isinstance(roots, list) or not roots:
+        report.fail("SKILL_WRITE_ROOTS_MISSING", skill_md,
+                    "a mutation-capable Skill must declare allowed_path_roots as a "
+                    f"non-empty list, got {roots!r}")
+        return
+
+    expected = ALLOWED_WRITE_PATH_ROOTS.get(d.name)
+    if expected is not None and list(roots) != list(expected):
+        report.fail("SKILL_WRITE_ROOTS_UNEXPECTED", skill_md,
+                    f"declared write roots {roots!r} do not match the approved surface "
+                    f"{expected!r}: widening it is a product decision, not an edit")
+
+    for root in roots:
+        if not isinstance(root, str) or not root.strip():
+            report.fail("SKILL_WRITE_ROOTS_MISSING", skill_md,
+                        f"write root {root!r} must be a non-empty string")
+            continue
+        # Reject user scope (SEC-17), absolutes, traversal, and the repository's own
+        # packaging: a Skill that can rewrite plugins/ can rewrite its own guarantees.
+        issues = path_hygiene_issues(root)
+        if issues:
+            report.fail(issues[0], skill_md,
+                        f"write root {root!r} is unsafe: {issues}")
+            continue
+        if any(root.startswith(prefix) for prefix in FORBIDDEN_WRITE_PATH_PREFIXES):
+            report.fail("SKILL_WRITE_ROOT_FORBIDDEN", skill_md,
+                        f"write root {root!r} is outside what any Skill may declare")
 
 
 if __name__ == "__main__":

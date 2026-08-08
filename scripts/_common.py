@@ -282,7 +282,7 @@ PLANNED_PRODUCTION_SKILLS = [
 # body, references and tests exist -- a shipped SKILL.md is host-discoverable whatever
 # it says, so an unimplemented name in the installable root is a product surface with
 # nothing behind it.
-IMPLEMENTED_PRODUCTION_SKILLS = ["plan-work"]          # M2 slice 1
+IMPLEMENTED_PRODUCTION_SKILLS = ["plan-work", "init-project"]   # M2 slices 1-2
 
 # Still unimplemented, and therefore still rejected in the installable root.
 FORBIDDEN_PRODUCTION_SKILLS = [
@@ -295,10 +295,68 @@ DISCOVERY_FIXTURE_SKILL = "m1-discovery-fixture"
 # Every Skill directory permitted in the installable root right now.
 ALLOWED_SKILLS = [DISCOVERY_FIXTURE_SKILL, *IMPLEMENTED_PRODUCTION_SKILLS]
 
-# Skills whose invocation policy must keep implicit invocation OFF. The fixture does
-# nothing, so being reachable by a model buys nothing and risks noise. plan-work is
-# read-only, so implicit selection costs a document, not a mutation.
-IMPLICIT_INVOCATION_MUST_BE_OFF = [DISCOVERY_FIXTURE_SKILL]
+# Skills whose invocation policy must keep implicit invocation OFF. Reachability should
+# match side effects: the fixture does nothing, so being selectable buys nothing;
+# init-project writes files, so it must start only because someone named it. plan-work
+# is read-only, so implicit selection costs a document, not a mutation.
+IMPLICIT_INVOCATION_MUST_BE_OFF = [DISCOVERY_FIXTURE_SKILL, "init-project"]
+
+# --------------------------------------------------------------------------
+# Skill safety profiles
+# --------------------------------------------------------------------------
+# Each implemented production Skill declares a machine-checkable contract in its body.
+# Profiles exist because "safe" is not one thing: a read-only Skill and a
+# mutation-capable one make different promises, and collapsing them would either let a
+# writer claim read-only or force a planner to declare approval fields it never uses.
+
+# True for every production Skill regardless of profile. Kept separate so a later
+# mutation-capable Skill inherits these without restating them.
+UNIVERSAL_SKILL_POLICY = {
+    "executes_commands": False,
+    "network_access": False,
+}
+
+SKILL_SAFETY_PROFILES = {
+    # Plans, proposes, and writes only when explicitly asked to save.
+    "read-only": {
+        **UNIVERSAL_SKILL_POLICY,
+        "read_only": True,
+        "modifies_source": False,
+        "modifies_config": False,
+        "spawns_agents": False,
+        "verification_default": "Not Run",
+        "persistence": "on-request-only",
+    },
+    # Writes files, but only after approval tied to a shown proposal.
+    "approval-gated-mutation": {
+        **UNIVERSAL_SKILL_POLICY,
+        "read_only": False,
+        "requires_explicit_invocation": True,
+        "requires_mutation_approval": True,
+        "installs_packages": False,
+        "modifies_user_settings": False,
+        "overwrites_existing_files": False,
+        "idempotent": True,
+    },
+}
+
+SKILL_PROFILE = {
+    "plan-work": "read-only",
+    "init-project": "approval-gated-mutation",
+}
+
+# A mutation-capable Skill must also declare its entire write surface. Anything outside
+# these roots is a path the user never agreed to.
+PROFILES_REQUIRING_PATH_ROOTS = ["approval-gated-mutation"]
+ALLOWED_WRITE_PATH_ROOTS = {
+    "init-project": [".agent-harness/", "CLAUDE.md", "AGENTS.md"],
+}
+
+# Roots a Skill may never declare: user scope is out of bounds (SEC-17), and so is
+# anything that would let a Skill rewrite version control or its own packaging.
+FORBIDDEN_WRITE_PATH_PREFIXES = [
+    "~", "/", "\\", ".git/", ".github/", "plugins/", "marketplace/", "scripts/",
+]
 
 # Structural policy marker embedded in a production SKILL.md body. Parsed as YAML, not
 # grepped: prose like "this Skill never runs commands" must not be mistaken for either

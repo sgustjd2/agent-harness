@@ -1,0 +1,16 @@
+# Invocation policy for init-project.
+#
+# Implicit invocation is DISABLED. init-project writes files, and a Skill that changes a
+# repository should start only because someone asked for it by name -- not because a
+# model judged it relevant to something nearby.
+#
+# This is the host-level invocation gate, and it is deliberately NOT the only gate. The
+# mutation-approval gate lives in the Skill body and works on every host, including ones
+# with no invocation policy mechanism at all. Neither replaces the other: this file
+# decides whether the Skill may START, the body decides whether it may WRITE.
+#
+# Only the documented policy field is set. No tool grants, connectors, dependencies,
+# network permissions, or agent declarations belong here.
+
+policy:
+  allow_implicit_invocation: false
