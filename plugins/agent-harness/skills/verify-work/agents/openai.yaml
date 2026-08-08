@@ -1,0 +1,17 @@
+# Invocation policy for verify-work.
+#
+# Implicit invocation is DISABLED. This Skill starts subprocesses, and a Skill that runs
+# commands should start only because someone named it -- not because a model judged it
+# relevant to a nearby request.
+#
+# This is the host invocation gate, and it is NOT execution approval. Starting the Skill
+# only earns the right to READ the configured gates and propose them; running them needs
+# a separate approval tied to the exact gate set displayed. The two gates are independent
+# and neither substitutes for the other, which matters most on hosts that have no
+# invocation policy mechanism at all -- there, the in-body approval gate is the only one.
+#
+# Only the documented policy field is set. No tool grants, connectors, dependencies,
+# network permissions, or agent declarations belong here.
+
+policy:
+  allow_implicit_invocation: false

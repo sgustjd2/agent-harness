@@ -7,6 +7,50 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### M2 — shared Skill implementation (in progress)
 
+#### Added — `verify-work` (slice 3)
+
+- **`verify-work`, the third production Skill, and the only one that runs commands.**
+  Executes the verification gates already configured in `.agent-harness/config.yaml` and
+  reports evidence. Instruction-only and dependency-free.
+- **Configured gates only.** The command set comes from validated configuration, never
+  from inference about `package.json`, a Makefile, CI files, or user prose. No configured
+  gate means `Blocked`, not a fallback guess.
+- **Execution approval is separate from invocation.** Approval is tied to the exact gate
+  set displayed, and goes stale when the config, argv, working directory, timeout,
+  `required` flag, or gate selection changes.
+- **argv arrays are the source of truth.** Shell strings are rejected, shell operators are
+  never synthesized, and argv that cannot be represented safely on a shell-only host makes
+  the gate `Blocked` rather than weakening the contract.
+- Per-gate preflight: non-empty id, supported kind, non-empty argv of non-empty strings,
+  positive timeout, repository-contained `working_dir`, boolean `required`, schema-valid
+  config. Sequential execution in declared order; no concurrency, no retry except a
+  configured `flaky_policy: rerun-once`, which never retries a missing executable, a
+  permission denial, or a timeout.
+- Statuses `Not Run` / `Passed` / `Failed` / `Blocked`, with overall computed from
+  required gates only. Optional failures never flip the result and are never hidden.
+- Bounded, redacted evidence; results returned in the response, no evidence file in this
+  milestone.
+- `skills/verify-work/references/execution-contract.md` and `evidence-template.md`.
+- `tests/test_verify_work_skill.py` — 21 test functions (58 parameterized cases).
+
+#### Changed — safety-profile model (slice 3)
+
+- **`executes_commands` is no longer part of `UNIVERSAL_SKILL_POLICY`.** It stopped being
+  universal the moment a verification Skill existed. Leaving it universal with one profile
+  overriding it would have been worse than moving it: a guarantee with an exception is a
+  default wearing the wrong name. Each profile now states its execution posture
+  explicitly, so no Skill inherits a promise it does not keep.
+- `network_access: false` remains genuinely universal.
+- New third profile **`bounded-verification`**, mapped to `verify-work`. Its
+  `read_only: false` means only that subprocesses run; it grants no write surface, and
+  `modifies_source` / `modifies_config` stay false.
+- `PROFILES_PERMITTING_EXECUTION` pins execution to exactly one profile, asserted in
+  tests so a future profile cannot acquire it silently.
+- `plan-work` and `init-project` are unchanged, with regression tests proving their
+  effective policy — including `executes_commands: false` — survived the refactor.
+- The `init-project` allowlist and forbidden-Skill tests now derive from `_common`, as the
+  `plan-work` ones already did, so widening a milestone edits one list rather than three.
+
 #### Added — `init-project` (slice 2)
 
 - **`init-project`, the second production Skill, and the first that writes files.**
