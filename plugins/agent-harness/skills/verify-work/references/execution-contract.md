@@ -41,17 +41,20 @@ of non-empty strings; `timeout_seconds` present and positive; `working_dir` cont
 the repository with no traversal and no outside-absolute path; `required` a boolean; and
 the configuration conforming to the state schema.
 
-A gate failing preflight is `Blocked` and does not start. A malformed **required** gate
-means overall verification cannot be `Passed`.
+A gate failing preflight is `Blocked` and does not start -- that is layer 1, below. A
+malformed **required** gate means `verification_status` cannot be `passed`.
 
 ## Execution
 
 - **Sequential, in declared order.** No concurrency in this milestone.
-- Each gate runs **once**, unless `flaky_policy: rerun-once` is configured — then a plain
-  non-zero exit may be rerun **exactly once**. A missing executable, a permission denial,
-  or a timeout is **never** retried.
-- Disagreeing runs mean **flaky**, which is **not** a pass. Record both runs separately.
-- Budget exhaustion leaves remaining gates `Not Run`, and verification unverified.
+- Each gate runs **once**, unless `flaky_policy: rerun-once` is configured — then, and
+  only then, a gate classified **`fail`** may be rerun **exactly once**.
+- **Never rerun `error`.** A missing executable stays missing.
+- **Never rerun `timeout`.** It exhausts the same bound again and spends the budget.
+- Disagreeing attempts mean **`flaky`**, which is **never promoted to `pass`**. Record
+  both attempts separately, each with command, exit code and excerpt.
+- Budget exhaustion classifies every remaining gate **`skipped`**, and
+  `verification_status` becomes `unverified`.
 
 ## Never
 
@@ -59,15 +62,47 @@ Package installation. Plugin installation. Marketplace registration. Git mutatio
 Network access initiated by this Skill. Editing source or configuration. Anything that is
 not a configured gate.
 
-## Statuses
+## Two layers
 
-`Not Run` never started · `Passed` started, exited 0, within timeout · `Failed` exited
-non-zero **or** timed out after starting · `Blocked` could not safely start.
+**Pre-execution blocking** and **process classification** are different questions.
 
-Overall, from **required** gates only: `Passed` when all ran and all passed; `Failed` when
-any failed; `Blocked` when none failed and any is blocked; `Not Run` when none started.
+**`Blocked`** applies *before* any process is attempted: no configured gates, stale
+execution approval, configuration that never becomes executable, an unsafe repository
+path, argv the host cannot represent safely, or no execution capability. A `Blocked` gate
+has no process outcome to classify.
 
-Optional failures never flip the overall result by themselves, and are never hidden.
+**Classification** applies once a valid gate reaches an attempted launch, using the PRD
+vocabulary and only that vocabulary:
+
+| Classification | Meaning |
+| :--- | :--- |
+| `pass` | started, exit code 0 |
+| `fail` | started normally, exit code non-zero |
+| `error` | executable not found, permission denied, or otherwise unable to execute |
+| `timeout` | started, exceeded its timeout, terminated because of it |
+| `skipped` | selected, then deliberately not run — budget exhaustion or a PRD-defined skip |
+| `flaky` | `rerun-once`, first attempt `fail`, rerun disagreed |
+
+`error` is **not** `Blocked` — the gate was valid and approved; the environment failed it,
+and burying that in a configuration category hides an environment problem. `timeout` is
+**not** `fail` — the process started and we killed it, which is a different diagnosis.
+`skipped` is **not** "never run" — the run reached the gate and passed over it.
+
+## verification_status
+
+From **required** gates only:
+
+| Value | Condition |
+| :--- | :--- |
+| `passed` | every required gate is `pass` |
+| `failed` | any required gate is `fail`, `error`, or `timeout` |
+| `unverified` | any required gate is `skipped`, `flaky`, pre-execution `Blocked`, or never ran |
+
+`failed` means the checks ran and something is wrong. `unverified` means the checks
+established nothing. Do not conflate them.
+
+Optional gates never change `verification_status`, and are never hidden. A one-line
+overall summary may be shown, but it is derived from this — never the source of truth.
 
 ## Evidence and output
 
@@ -83,9 +118,9 @@ Optional failures never flip the overall result by themselves, and are never hid
 
 ## No false success
 
-A command that exists is not a command that passed. `Passed` requires an observed exit
+A command that exists is not a command that passed. `pass` requires an observed exit
 code of 0 from this run. A previous run's result is not this run's result unless the user
-explicitly asked for reuse.
+explicitly asked for reuse. `flaky` is never promoted to `pass`.
 
-When the overall result is anything but `Passed`, say the work is **unverified** and name
-the gates responsible.
+When `verification_status` is anything but `passed`, say the work is **failed or
+unverified** -- whichever applies -- and name the gates responsible.
