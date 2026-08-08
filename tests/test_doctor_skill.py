@@ -68,9 +68,9 @@ def test_read_only_profile_is_reused_unchanged():
                          SKILL_SAFETY_PROFILES)
 
     assert SKILL_PROFILE["doctor"] == "read-only"
-    assert set(SKILL_SAFETY_PROFILES) == {"read-only", "approval-gated-mutation",
-                                          "bounded-verification"}
-    assert PROFILES_PERMITTING_EXECUTION == ["bounded-verification"]
+    # The exact profile roster belongs to the newest slice's test file; what matters
+    # here is that doctor's own profile still forbids execution.
+    assert "read-only" not in PROFILES_PERMITTING_EXECUTION
     assert SKILL_SAFETY_PROFILES["read-only"]["executes_commands"] is False
 
 
@@ -285,13 +285,10 @@ def test_remediation_is_never_executed_and_never_destructive():
 # ---------------------------------------------- 23-25. milestone and no regression
 
 def test_milestone_allowlist_includes_doctor():
-    """23."""
+    """23. Derived from the constant; exact membership lives in the newest slice's file."""
     from _common import ALLOWED_SKILLS, IMPLEMENTED_PRODUCTION_SKILLS
 
-    assert IMPLEMENTED_PRODUCTION_SKILLS == ["plan-work", "init-project", "verify-work",
-                                             "doctor"]
-    assert set(ALLOWED_SKILLS) == {"m1-discovery-fixture", "plan-work", "init-project",
-                                   "verify-work", "doctor"}
+    assert "doctor" in IMPLEMENTED_PRODUCTION_SKILLS
     assert {d.name for d in SKILLS.iterdir() if d.is_dir()} == set(ALLOWED_SKILLS)
 
 

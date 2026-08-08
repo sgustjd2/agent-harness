@@ -283,7 +283,7 @@ PLANNED_PRODUCTION_SKILLS = [
 # it says, so an unimplemented name in the installable root is a product surface with
 # nothing behind it.
 IMPLEMENTED_PRODUCTION_SKILLS = ["plan-work", "init-project", "verify-work",
-                                "doctor"]                    # M2 slices 1-4
+                                "doctor", "orchestrate"]     # M2 slices 1-5
 
 # Still unimplemented, and therefore still rejected in the installable root.
 FORBIDDEN_PRODUCTION_SKILLS = [
@@ -300,7 +300,8 @@ ALLOWED_SKILLS = [DISCOVERY_FIXTURE_SKILL, *IMPLEMENTED_PRODUCTION_SKILLS]
 # match side effects: the fixture does nothing, so being selectable buys nothing;
 # init-project writes files, so it must start only because someone named it. plan-work
 # is read-only, so implicit selection costs a document, not a mutation.
-IMPLICIT_INVOCATION_MUST_BE_OFF = [DISCOVERY_FIXTURE_SKILL, "init-project", "verify-work"]
+IMPLICIT_INVOCATION_MUST_BE_OFF = [DISCOVERY_FIXTURE_SKILL, "init-project",
+                                   "verify-work", "orchestrate"]
 
 # --------------------------------------------------------------------------
 # Skill safety profiles
@@ -378,6 +379,32 @@ SKILL_SAFETY_PROFILES = {
         "verification_default": "Not Run",
         "evidence_persistence": "response-only",
     },
+    # Executes an already-approved plan: runs planned commands, writes planned paths,
+    # and may delegate to subagents.
+    #
+    # This is the widest profile in the product, and every field below is the boundary
+    # that makes it acceptable. The authority does not come from the Skill -- it comes
+    # from a plan a human already approved, which is why `requires_ready_plan` sits
+    # beside the three "..._only" constraints rather than in place of them. Being allowed
+    # to act is not the same as being allowed to decide what to do.
+    "plan-bounded-orchestration": {
+        **UNIVERSAL_SKILL_POLICY,
+        "read_only": False,
+        "executes_commands": True,
+        "spawns_agents": True,
+        "modifies_source": True,
+        "requires_explicit_invocation": True,
+        "requires_ready_plan": True,
+        "executes_planned_commands_only": True,
+        "modifies_planned_paths_only": True,
+        "destructive_actions_require_approval": True,
+        "respects_dependency_graph": True,
+        "max_parallel_from_config": True,
+        "auto_merge_conflicts": False,
+        "modifies_user_settings": False,
+        "evidence_persistence": "response-only",
+        "run_state_runtime": "deferred",
+    },
 }
 
 SKILL_PROFILE = {
@@ -388,11 +415,17 @@ SKILL_PROFILE = {
     # so it needs no execution and no write surface -- the profile already says exactly
     # that, and widening it to fit would have defeated the point of having profiles.
     "doctor": "read-only",
+    "orchestrate": "plan-bounded-orchestration",
 }
 
 # Only this profile may run a subprocess. Asserted in tests so a future profile cannot
 # acquire execution by inheritance without someone deciding to grant it.
-PROFILES_PERMITTING_EXECUTION = ["bounded-verification"]
+PROFILES_PERMITTING_EXECUTION = ["bounded-verification", "plan-bounded-orchestration"]
+
+# Delegating to subagents is narrower still than executing. verify-work runs commands but
+# must never spawn an agent: a verifier that could delegate could delegate its way around
+# its own gate list.
+PROFILES_PERMITTING_AGENT_SPAWN = ["plan-bounded-orchestration"]
 
 # A mutation-capable Skill must also declare its entire write surface. Anything outside
 # these roots is a path the user never agreed to.

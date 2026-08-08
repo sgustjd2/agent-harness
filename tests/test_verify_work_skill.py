@@ -397,13 +397,20 @@ def test_earlier_skills_still_forbid_execution_after_the_refactor(skill, profile
     assert declared["executes_commands"] is False
 
 
-def test_only_one_profile_may_execute():
-    """Execution is granted deliberately, never acquired by inheritance."""
+def test_execution_is_an_explicit_grant_never_inherited():
+    """Execution is granted deliberately, never acquired by inheritance.
+
+    The assertion is against the explicit grant list rather than a count: a second
+    executing profile (plan-bounded-orchestration) is legitimate, a profile that executes
+    WITHOUT appearing on the list is not.
+    """
     from _common import (PROFILES_PERMITTING_EXECUTION, SKILL_SAFETY_PROFILES,
                          UNIVERSAL_SKILL_POLICY)
 
     assert "executes_commands" not in UNIVERSAL_SKILL_POLICY, (
         "executes_commands stopped being universal when verify-work existed")
     assert UNIVERSAL_SKILL_POLICY["network_access"] is False
+    assert "bounded-verification" in PROFILES_PERMITTING_EXECUTION
     executing = [n for n, p in SKILL_SAFETY_PROFILES.items() if p["executes_commands"]]
-    assert executing == PROFILES_PERMITTING_EXECUTION == ["bounded-verification"]
+    assert sorted(executing) == sorted(PROFILES_PERMITTING_EXECUTION), (
+        f"a profile executes without being granted execution: {executing}")

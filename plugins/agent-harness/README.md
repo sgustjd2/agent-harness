@@ -13,6 +13,7 @@ skills/plan-work/               production Skill (experimental), read-only
 skills/init-project/            production Skill (experimental), approval-gated
 skills/verify-work/             production Skill (experimental), bounded execution
 skills/doctor/                  production Skill (experimental), read-only diagnostics
+skills/orchestrate/             production Skill (experimental), plan-bounded execution
 core/schemas/                   five packaging schemas
 core/schemas/state/             state schemas -- NOT packaging evidence
 adapters/claude/                Claude integration
@@ -32,8 +33,9 @@ workflow layer, two thin adapters.
 | `init-project` | production | **experimental**, approval-gated mutation |
 | `verify-work` | production | **experimental**, bounded command execution |
 | `doctor` | production | **experimental**, read-only harness diagnostics |
+| `orchestrate` | production | **experimental**, plan-bounded orchestration |
 
-**No other production Skill is implemented.** `orchestrate`, `refine-harness` and
+**No other production Skill is implemented.** `refine-harness` and
 `apply-refinement` are planned, and
 `validate_skills.py` rejects any of those names appearing here until each is actually
 built. A shipped `SKILL.md` is host-discoverable whatever its body says, so a
@@ -69,8 +71,8 @@ repository.
 ## Constraints binding everything here
 
 - No file may reference a path outside this directory.
-- No *unimplemented* production Skill name (`orchestrate`, `refine-harness`,
-  `apply-refinement`) may appear as a directory here. The allowlist widens one
+- No *unimplemented* production Skill name (`refine-harness`, `apply-refinement`)
+  may appear as a directory here. The allowlist widens one
   Skill at a time, as each is implemented.
 - No `scripts/`, `assets/` or dependency manifest inside any Skill: Skills are
   instruction-only, so there is nothing to execute and nothing to install.
@@ -159,12 +161,43 @@ availability cannot be established statically is reported `unknown` rather than 
 It repairs nothing: a corrupt config or memory file is a finding, not permission to fix
 it. Remediation commands are printed as suggestions and never executed.
 
-### How the four production Skills are checked
+### `orchestrate`
+
+Executes a plan that already exists — walks the dependency graph, delegates what can
+safely run at once, and reports what actually happened.
+
+**The authority comes from the plan, not the Skill.** A human approved that plan;
+`orchestrate` carries it out and never decides *what* to do, only how to sequence it. It
+requires a **ready** plan: no plan means `Blocked` recommending `plan-work`, never a
+synthesized one, and a cyclic graph is rejected rather than repaired.
+
+Three constraints make the widest authority in the product acceptable: **planned commands
+only**, **planned paths only**, **dependency graph respected**. A `changed_files` entry
+outside a task's `writes[]` is a scope violation, and the plan is never widened afterwards
+to justify it. Two results touching the same file are held and reported — **never
+auto-merged**.
+
+Explicit invocation authorises ordinary planned work; asking again per task would make the
+gate a formality. Destructive and irreversible actions — force push, tree deletion,
+migrations, history rewrites, permission weakening — need separate approval immediately
+before the action, and without it the task is marked `blocked` while safe work continues.
+
+`orchestrate` **never declares `completed`**: completion depends on verification, and
+`verify-work` owns gate outcomes. Nothing is persisted in this milestone — no
+`evidence.md`, no `result.md`, no resume engine.
+
+### How the five production Skills are checked
 
 All three declare an `agent-harness:policy` marker, but against **different safety
 profiles**: `plan-work` and `doctor` are `read-only`, `init-project` is
-`approval-gated-mutation`, `verify-work` is `bounded-verification`. One flattened table
-would let a Skill that writes files claim it does not.
+`approval-gated-mutation`, `verify-work` is `bounded-verification`, `orchestrate` is
+`plan-bounded-orchestration`. One flattened table would let a Skill that writes files
+claim it does not.
+
+Execution and delegation are granted **separately**, both as explicit lists. Two profiles
+may run commands (`bounded-verification`, `plan-bounded-orchestration`); only one may
+spawn agents (`plan-bounded-orchestration`). `verify-work` deliberately cannot delegate —
+a verifier that could would be able to delegate its way around its own gate list.
 
 `doctor` reusing `read-only` unchanged is the point of having profiles: a diagnostic that
 needed the profile widened to fit would not have been a diagnostic.

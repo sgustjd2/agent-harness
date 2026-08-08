@@ -68,6 +68,9 @@ REQUIRED_REFERENCES = {
                     "references/evidence-template.md"],
     "doctor": ["references/diagnostic-matrix.md",
                "references/remediation-guide.md"],
+    "orchestrate": ["references/orchestration-contract.md",
+                    "references/handoff-contract.md",
+                    "references/conflict-policy.md"],
 }
 
 # Never inside a Skill: these slices are instruction-only, so there is nothing to
