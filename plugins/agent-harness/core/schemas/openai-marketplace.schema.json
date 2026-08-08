@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/OWNER/agent-harness/schemas/openai-marketplace.schema.json",
+  "title": "OpenAI/Codex marketplace catalog (local compatibility schema)",
+  "$comment": "LOCAL COMPATIBILITY SCHEMA -- NOT A VENDOR-PUBLISHED COMPLETE SCHEMA. Official host behaviour remains authoritative. This models ONLY the fields and values agent-harness uses at M1, so it can catch our own mistakes early; a file passing this schema is not thereby guaranteed to be accepted by the host, and a value this schema excludes is not thereby invalid for the vendor generally. Every enum below is traceable to an evidence row in docs/m1-defects.md. Official documentation: https://developers.openai.com/plugins/build/plugins",
+  "description": "Validates .agents/plugins/marketplace.json at M1. Local compatibility schema for the documented OpenAI marketplace subset: it accepts BOTH documented local source forms, while Candidate C generation emits the object form by local choice. No official Codex catalog validator exists (codex plugin --help exposes no validate subcommand on codex-cli 0.146.0-alpha.9.2).",
+  "type": "object",
+  "required": [
+    "name",
+    "interface",
+    "plugins"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "$comment": "Local-M1-Policy. The OpenAI marketplace page does not explicitly state a case rule for the top-level marketplace name; kebab-case is applied here for consistency with the plugin identifier and with the Claude marketplace, where it IS documented. Evidence level is Local-M1-Policy, not Official-Documented."
+    },
+    "interface": {
+      "type": "object",
+      "required": [
+        "displayName"
+      ],
+      "additionalProperties": false,
+      "$comment": "Official-Documented: the published example contains interface.displayName. No other interface key is modelled at M1.",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "plugins": {
+      "type": "array",
+      "minItems": 1,
+      "$comment": "Official-Documented. minItems is a Local-M1-Policy restriction: an empty catalog registers a source that offers nothing.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "source",
+          "policy",
+          "category"
+        ],
+        "additionalProperties": false,
+        "$comment": "policy and category are REQUIRED at M1. Both appear in every plugin entry of the published example, and requiring them keeps the generated catalog explicit about install posture rather than relying on host defaults.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "$comment": "Local-M1-Policy DERIVED from an Official-Documented contract. The rule enforced here is IDENTITY PARITY: this entry must name the same plugin as .codex-plugin/plugin.json. Official-Documented: that MANIFEST name is a stable kebab-case plugin identifier and component namespace. NOT Official-Documented: the OpenAI marketplace page does not independently state a kebab-case rule for a catalog entry's name -- its examples merely reuse the same plugin identity. So kebab-case is required here THROUGH parity with the manifest, not as a separately published marketplace-field constraint. The pattern is deliberately retained: a catalog entry that cannot name a valid plugin identity cannot name a valid plugin. M1.4A corrected this label, which M1.3.1 overstated as directly Official-Documented."
+          },
+          "source": {
+            "$comment": "BOTH forms are Official-Documented for local entries. The documentation shows the object form {\"source\": \"local\", \"path\": \"./plugins/my-plugin\"} and states that for local entries source can also be a plain string path such as \"./plugins/my-plugin\". M1.3 incorrectly recorded the string form as undocumented; M1.3.1 corrects that. Candidate C emits the OBJECT form by local architecture choice (explicit, extensible, separates type from path, maps deterministically from the canonical model) -- NOT because the string form is invalid. Path hygiene is enforced identically on both.",
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "source",
+                  "path"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "local"
+                    ],
+                    "$comment": "Local-M1-Policy narrowing of an Official-Documented field: M1 uses only the 'local' type. Other vendor source types are excluded from this profile, not declared invalid for the vendor."
+                  },
+                  "path": {
+                    "type": "string",
+                    "pattern": "^\\./(?:(?!\\.\\.(?:/|$))[A-Za-z0-9._-]+/)*(?:(?!\\.\\.(?:/|$))[A-Za-z0-9._-]+)?$"
+                  }
+                }
+              },
+              {
+                "type": "string",
+                "pattern": "^\\./(?:(?!\\.\\.(?:/|$))[A-Za-z0-9._-]+/)*(?:(?!\\.\\.(?:/|$))[A-Za-z0-9._-]+)?$",
+                "$comment": "Official-Documented alternate local form. Same path hygiene."
+              }
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "$comment": "Local-M1-Policy: not in the published minimal example, but accepted by the host and useful to users."
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+            "$comment": "Local-M1-Policy: SemVer, kept in sync across all version-bearing files by check_version_sync.py."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "$comment": "Official-Documented; the published example uses \"Productivity\". NOT an identifier: no kebab-case constraint, and no enum -- the vendor publishes no exhaustive category list."
+          },
+          "policy": {
+            "type": "object",
+            "required": [
+              "installation",
+              "authentication"
+            ],
+            "additionalProperties": false,
+            "$comment": "additionalProperties:false is deliberate. The removed invented field `install` (DEF-001) must FAIL here rather than be silently accepted or aliased -- a misspelling should break the build, not be repaired behind the author's back.",
+            "properties": {
+              "installation": {
+                "type": "string",
+                "enum": [
+                  "AVAILABLE",
+                  "INSTALLED_BY_DEFAULT",
+                  "NOT_AVAILABLE"
+                ],
+                "$comment": "Official-Documented: the documentation states policy.installation takes values such as AVAILABLE, INSTALLED_BY_DEFAULT or NOT_AVAILABLE. The generated M1 artifact uses AVAILABLE. Note the vendor wording is 'such as', so this list may be non-exhaustive; it is not extended by guesswork."
+              },
+              "authentication": {
+                "type": "string",
+                "enum": [
+                  "ON_INSTALL",
+                  "ON_USE"
+                ],
+                "$comment": "ON_INSTALL is Official-Documented -- it appears literally in the published example, and the documentation describes the field as deciding whether auth happens on install or first use (the first-use BEHAVIOUR is therefore Official-Documented semantics). ON_USE is retained here as a HOST-OBSERVED, VERSION-SCOPED literal: codex-cli 0.146.0-alpha.9.2 accepted it, but no published document states the literal spelling as a cross-version contract. It is not an Official-Documented enum literal. Candidate C emits ON_INSTALL and never selects ON_USE by default. No NONE or none value is permitted (DEF-001)."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

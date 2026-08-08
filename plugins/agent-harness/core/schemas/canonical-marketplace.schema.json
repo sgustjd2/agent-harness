@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/OWNER/agent-harness/schemas/canonical-marketplace.schema.json",
+  "title": "Canonical marketplace source (local schema, Candidate C)",
+  "$comment": "LOCAL COMPATIBILITY SCHEMA -- NOT AN OFFICIAL HOST SCHEMA. Host behaviour remains authoritative; this schema encodes only the subset of fields agent-harness relies on at M1, so it can catch our own mistakes early. A file passing this schema is not thereby guaranteed to be accepted by the host. This is agent-harness's own host-neutral format, not a host format. It is the generation input for both native catalogs. M1.3 replaced the host-shaped `policy` block with named semantic concepts (DEF-001).",
+  "description": "Validates marketplace/marketplace.source.json. Under Candidate C this is the only hand-edited catalog file; both native catalogs are generated from it.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "marketplace",
+    "plugins"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_comment": {
+      "type": [
+        "string",
+        "array"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "marketplace": {
+      "type": "object",
+      "required": [
+        "name",
+        "description",
+        "display_name",
+        "owner"
+      ],
+      "additionalProperties": false,
+      "$comment": "Every semantic field either native catalog needs must be present here, or generation would have to invent it.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "$comment": "Feeds both host marketplace names. Kebab-case is Official-Documented on the Claude side and Local-M1-Policy on the OpenAI side; the stricter of the two applies here."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "email": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "plugins": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "version",
+          "description",
+          "source_path",
+          "category",
+          "installation_availability",
+          "authentication_timing"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "$comment": "Feeds the shared plugin identity in both catalogs and both manifests, so it carries the strictest applicable rule. Kebab-case is Official-Documented for the Claude marketplace entry name and for both plugin MANIFEST names. For the OpenAI marketplace entry name it is Local-M1-Policy derived from identity parity with the Codex manifest -- see openai-marketplace.schema.json. Corrected in M1.4A."
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_path": {
+            "type": "string",
+            "pattern": "^\\./(?:(?!\\.\\.(?:/|$))[A-Za-z0-9._-]+/)*(?:(?!\\.\\.(?:/|$))[A-Za-z0-9._-]+)?$"
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "$comment": "Free-form organisational string on both hosts. Not an identifier."
+          },
+          "installation_availability": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "INSTALLED_BY_DEFAULT",
+              "NOT_AVAILABLE"
+            ],
+            "$comment": "Canonical semantic concept -> OpenAI policy.installation. Named so it cannot be confused with the host output field. Official-Documented values."
+          },
+          "authentication_timing": {
+            "type": "string",
+            "enum": [
+              "ON_INSTALL",
+              "ON_USE"
+            ],
+            "$comment": "Canonical concept -> OpenAI policy.authentication. ON_INSTALL is Official-Documented. ON_USE is Host-Observed on codex-cli 0.146.0-alpha.9.2 and version-scoped, not a documented cross-version literal. Candidate C emits ON_INSTALL."
+          }
+        },
+        "$comment": "Canonical concepts only. Claude defines no equivalent of the OpenAI policy fields, so the generator emits them to the OpenAI catalog only."
+      }
+    }
+  }
+}

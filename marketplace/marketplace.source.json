@@ -1,0 +1,42 @@
+{
+  "_comment": [
+    "CANONICAL MARKETPLACE SOURCE -- Candidate C (PRD DEC-P14, §10.3).",
+    "",
+    "This is the ONLY hand-edited catalog file. Both host-native catalogs are generated",
+    "from it by scripts/generate_marketplaces.py and byte-compared in CI (PKG-9).",
+    "Never hand-edit .claude-plugin/marketplace.json or .agents/plugins/marketplace.json.",
+    "",
+    "Field names here are CANONICAL SEMANTIC CONCEPTS, deliberately named so they cannot",
+    "be confused with either host's output field names. The generator maps them:",
+    "  installation_availability -> OpenAI policy.installation",
+    "  authentication_timing     -> OpenAI policy.authentication",
+    "  source_path               -> Claude 'source' string / OpenAI 'source' object",
+    "Claude defines no equivalent of the OpenAI policy fields, so they are not emitted",
+    "into the Claude catalog.",
+    "",
+    "M1.3: the previous policy block used an invented field (policy.install) and an",
+    "invalid value (authentication 'none'). Both were removed -- see docs/m1-defects.md",
+    "DEF-001. Values here are now taken from the official OpenAI plugin packaging",
+    "documentation, not inferred."
+  ],
+  "schema_version": 1,
+  "marketplace": {
+    "name": "agent-harness",
+    "description": "agent-harness workflow plugin for Claude Code and OpenAI Codex",
+    "display_name": "agent-harness",
+    "owner": {
+      "name": "agent-harness maintainers"
+    }
+  },
+  "plugins": [
+    {
+      "name": "agent-harness",
+      "version": "0.0.1",
+      "description": "Vendor-neutral agent workflow layer: plan, delegate by role, verify with gates, record evidence, and refine through reviewable proposals.",
+      "source_path": "./plugins/agent-harness",
+      "category": "Productivity",
+      "installation_availability": "AVAILABLE",
+      "authentication_timing": "ON_INSTALL"
+    }
+  ]
+}

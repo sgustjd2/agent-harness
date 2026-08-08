@@ -1,0 +1,44 @@
+# Project configuration for agent-harness DEVELOPMENT tooling.
+#
+# This file deliberately declares NO runtime package dependency and NO publishing
+# configuration. The installable plugin is distributed through host plugin
+# marketplaces, not through a Python package index, and it has no third-party
+# runtime dependency.
+
+[project]
+name = "agent-harness-dev"
+version = "0.0.1"
+description = "Development and validation tooling for the agent-harness plugin scaffold"
+requires-python = ">=3.10"
+
+# Intentionally empty: the plugin runtime is standard-library only.
+dependencies = []
+
+[project.optional-dependencies]
+# Mirrors requirements-dev.txt. Development only.
+dev = [
+    "PyYAML>=6.0,<7.0",
+    "jsonschema>=4.20,<5.0",
+    "pytest>=8.0,<9.0",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# -q keeps output readable; strict markers turn a typo'd marker into an error
+# rather than a silently unfiltered test.
+addopts = "-q --strict-markers --strict-config"
+
+markers = [
+    "deterministic: runs anywhere, no host and no model required. Default CI set.",
+    "host_cli: requires a host CLI (claude/codex) to be installed. Skipped when absent.",
+    "manual: requires a human, a real host session, or a model invocation. Never auto-run.",
+]
+
+[tool.pytest]
+# No network access is used by any test. Dependency installation happens once,
+# outside the test run, into a local virtual environment.

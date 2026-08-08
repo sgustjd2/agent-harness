@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Build / release artifacts. Under Candidate C these are generated, not authored.
+dist/
+
+# Local experiment scratch. Experiment RECORDS are committed (adapters/**/*.md);
+# raw scratch output is not, because it is the most likely place for an accidental
+# environment dump to appear.
+.experiment-scratch/
+
+# Local development virtual environment. Never committed.
+.venv/
+venv/

@@ -1,0 +1,45 @@
+# agent-harness project configuration
+# Schema: plugins/agent-harness/core/schemas/config.schema.json
+#
+# Gates are argv arrays, never shell strings (SEC-08). Nothing here is executed
+# without the user having put it here first (FR-010).
+
+schema_version: 1
+project:
+  name: example-typescript-web
+  type:
+    - typescript
+vcs: git
+orchestration:
+  max_parallel_agents: 3
+  max_delegation_depth: 1
+verification:
+  gates:
+    - id: js-test
+      kind: test
+      command:
+        - npm
+        - run
+        - test
+      required: true
+      timeout_seconds: 900
+    - id: ts-typecheck
+      kind: typecheck
+      command:
+        - npx
+        - tsc
+        - --noEmit
+      required: true
+      timeout_seconds: 600
+    - id: js-lint
+      kind: lint
+      command:
+        - npm
+        - run
+        - lint
+      required: true
+      timeout_seconds: 300
+runs:
+  retention_count: 20
+  auto_prune: false
+  commit_evidence: false

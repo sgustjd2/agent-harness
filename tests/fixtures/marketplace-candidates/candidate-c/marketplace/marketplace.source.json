@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "marketplace": {
+    "name": "agent-harness",
+    "description": "agent-harness workflow plugin",
+    "display_name": "agent-harness",
+    "owner": {
+      "name": "agent-harness maintainers"
+    }
+  },
+  "plugins": [
+    {
+      "name": "agent-harness",
+      "version": "0.0.1",
+      "description": "d",
+      "source_path": "./plugins/agent-harness",
+      "category": "workflow"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+# Development and CI dependencies ONLY.
+#
+# The installable plugin under plugins/agent-harness/ has NO required third-party
+# dependency and must keep none. These packages exist so that validation uses
+# established, audited implementations of published standards rather than
+# hand-written approximations of them.
+#
+# Install into a local virtual environment, never globally:
+#   python -m venv .venv
+#   .venv/bin/pip install -r requirements-dev.txt        # POSIX
+#   .venv\Scripts\pip install -r requirements-dev.txt    # Windows
+#
+# Bounded ranges: allow patch and minor updates, exclude the next major, where a
+# major bump could change parsing or validation behaviour we depend on.
+
+# Authoritative YAML parser. Used via yaml.safe_load for SKILL.md frontmatter,
+# agents/openai.yaml, and example config files.
+PyYAML>=6.0,<7.0
+
+# Authoritative JSON Schema validator. Used via jsonschema.Draft202012Validator,
+# matching the $schema each local schema declares.
+jsonschema>=4.20,<5.0
+
+# Authoritative test runner. All deterministic tests run through pytest.
+pytest>=8.0,<9.0

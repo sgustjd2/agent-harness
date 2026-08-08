@@ -1,0 +1,20 @@
+# Line endings are part of the contract here.
+#
+# scripts/generate_marketplaces.py emits catalogs with LF and CI byte-compares them
+# against the canonical source. If Git rewrote them to CRLF on checkout, drift
+# detection would fire on every Windows clone for a reason that has nothing to do
+# with content. So generated and validated files are pinned to LF everywhere.
+
+* text=auto eol=lf
+
+*.json  text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.md    text eol=lf
+*.py    text eol=lf
+*.toml  text eol=lf
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary

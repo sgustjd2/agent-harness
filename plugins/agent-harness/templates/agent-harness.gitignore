@@ -1,0 +1,9 @@
+# Written into .agent-harness/.gitignore by init-project.
+#
+# Run evidence and proposals stay local by default (DEC-C22, SEC-19). Redaction is
+# fail-closed, but residual leak risk in raw output is why these are not committed.
+# Memory files and config.yaml ARE tracked -- they are the point of the product.
+runs/
+proposals/
+*.tmp
+.migration-backup/

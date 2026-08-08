@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/OWNER/agent-harness/schemas/config.schema.json",
+  "title": "agent-harness project configuration (.agent-harness/config.yaml)",
+  "description": "PRD FR-010, FR-026, §14.1. Defaults reflect DEC-C21 (memory committed) and DEC-C22 (runs/proposals local-only).",
+  "type": "object",
+  "required": ["schema_version", "project", "orchestration", "verification"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "FR-026. MVP is 1."
+    },
+    "project": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["python", "javascript", "typescript", "generic"] }
+        }
+      }
+    },
+    "vcs": {
+      "type": "string",
+      "enum": ["git", "none"],
+      "description": "§9 UJ-03 fallback. 'none' means rollback is manual."
+    },
+    "orchestration": {
+      "type": "object",
+      "required": ["max_parallel_agents", "max_delegation_depth"],
+      "additionalProperties": false,
+      "properties": {
+        "max_parallel_agents": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "PRD §13.5 DEC-P01. Default 3, hard cap 5."
+        },
+        "max_delegation_depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2,
+          "description": "PRD §13.5 DEC-P02. Default 1, hard cap 2."
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": ["gates"],
+      "additionalProperties": false,
+      "properties": {
+        "gates": {
+          "type": ["array", "null"],
+          "description": "FR-010. Commands are argv arrays, never shell strings (SEC-08, THR-004). null means no gates are configured yet: detection PROPOSES commands, the user approves, and only then are they written here. Until then verify-work reports 'unverified' (PRD §15.2).",
+          "items": { "$ref": "#/$defs/gate" }
+        },
+        "run_budget_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "PRD §15.3. Default 1800."
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "retention": { "type": "string", "enum": ["unlimited"] }
+      }
+    },
+    "runs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "retention_count": { "type": "integer", "minimum": 1 },
+        "auto_prune": { "type": "boolean" },
+        "commit_evidence": {
+          "type": "boolean",
+          "description": "DEC-C22. Default false. Enabling this reintroduces THR-002/THR-017 risk; doctor warns."
+        }
+      }
+    },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "extra_patterns": {
+          "type": "array",
+          "description": "FR-023. The built-in pattern list may be extended, never reduced.",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "gate": {
+      "type": "object",
+      "required": ["id", "kind", "command", "required", "timeout_seconds"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "kind": {
+          "type": "string",
+          "enum": ["test", "lint", "typecheck", "build", "security", "custom"]
+        },
+        "command": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "argv array. A shell string here is a schema violation (SEC-08)."
+        },
+        "required": { "type": "boolean" },
+        "timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 86400 },
+        "working_dir": { "type": "string" },
+        "flaky_policy": { "type": "string", "enum": ["none", "rerun-once"] }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "agent-harness",
+  "version": "0.0.1",
+  "description": "Vendor-neutral agent workflow layer: plan, delegate by role, verify with gates, record evidence, and refine through reviewable proposals. M1 scaffold -- Skills are placeholders.",
+  "skills": "./skills/",
+  "author": {
+    "name": "agent-harness maintainers"
+  },
+  "homepage": "https://github.com/OWNER/agent-harness",
+  "repository": "https://github.com/OWNER/agent-harness",
+  "license": "Apache-2.0",
+  "keywords": [
+    "workflow",
+    "agents",
+    "verification"
+  ]
+}

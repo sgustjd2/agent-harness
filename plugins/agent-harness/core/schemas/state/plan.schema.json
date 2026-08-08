@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/OWNER/agent-harness/schemas/plan.schema.json",
+  "title": "agent-harness run plan (.agent-harness/runs/<run-id>/plan.md frontmatter)",
+  "description": "PRD FR-007, §14.1. Validates the YAML frontmatter block, not the Markdown body.",
+  "type": "object",
+  "required": ["schema_version", "run_id", "created", "goal", "classification", "state", "tasks"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}-[0-9]{6}-[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "DEC-P03 format: YYYYMMDD-HHMMSS-<slug>."
+    },
+    "created": { "type": "string", "minLength": 1 },
+    "goal": { "type": "string", "minLength": 1 },
+    "classification": {
+      "type": "string",
+      "enum": ["trivial", "single-agent", "parallel", "sequential"],
+      "description": "PRD §13.1."
+    },
+    "state": { "$ref": "#/$defs/run_state" },
+    "memory": {
+      "type": "string",
+      "enum": ["loaded", "partial", "unavailable"],
+      "description": "§9 UJ-04 fallback / §14.10 corruption recovery."
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "description": "PRD §14.6 caps a plan at 50 tasks.",
+      "items": { "$ref": "#/$defs/task" }
+    }
+  },
+  "$defs": {
+    "run_state": {
+      "type": "string",
+      "enum": [
+        "intake", "planning", "ready", "executing", "reviewing",
+        "verifying", "refining", "completed", "failed", "blocked", "cancelled"
+      ],
+      "description": "PRD §13.10 state machine."
+    },
+    "task": {
+      "type": "object",
+      "required": ["task_id", "title", "role", "completion_criteria", "depends_on"],
+      "additionalProperties": false,
+      "properties": {
+        "task_id": { "type": "string", "pattern": "^T-[0-9]{3}$" },
+        "title": { "type": "string", "minLength": 1 },
+        "role": { "$ref": "#/$defs/role" },
+        "completion_criteria": {
+          "type": "string",
+          "minLength": 1,
+          "description": "FR-007 AC-1: must not be empty. A task without this cannot be verified."
+        },
+        "depends_on": { "type": "array", "items": { "type": "string", "pattern": "^T-[0-9]{3}$" } },
+        "reads": { "type": "array", "items": { "type": "string" } },
+        "writes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "PRD §13.8: overlapping writes force sequential scheduling."
+        },
+        "gates": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "role": {
+      "type": "string",
+      "enum": ["coordinator", "researcher", "implementer", "reviewer", "tester", "refiner"],
+      "description": "PRD §12 logical roles."
+    }
+  }
+}

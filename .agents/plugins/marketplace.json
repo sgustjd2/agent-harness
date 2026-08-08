@@ -1,0 +1,22 @@
+{
+  "name": "agent-harness",
+  "interface": {
+    "displayName": "agent-harness"
+  },
+  "plugins": [
+    {
+      "name": "agent-harness",
+      "source": {
+        "source": "local",
+        "path": "./plugins/agent-harness"
+      },
+      "description": "Vendor-neutral agent workflow layer: plan, delegate by role, verify with gates, record evidence, and refine through reviewable proposals.",
+      "version": "0.0.1",
+      "category": "Productivity",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    }
+  ]
+}

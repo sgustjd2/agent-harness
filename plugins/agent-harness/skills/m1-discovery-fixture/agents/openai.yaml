@@ -1,0 +1,12 @@
+# Invocation policy for the M1 discovery fixture.
+#
+# The fixture exists so hosts can DISCOVER it, not so a model can RUN it. Disabling
+# implicit invocation keeps it inert while leaving explicit invocation available for
+# the discovery experiment.
+#
+# It also proves the mechanism: this file sits inside the Skill directory, so it
+# travels with the Skill through packaging, cache copy, and the repo-scoped fallback
+# path -- which is what lets a policy survive where the plugin lifecycle does not.
+
+policy:
+  allow_implicit_invocation: false

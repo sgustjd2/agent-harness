@@ -1,0 +1,16 @@
+{
+  "name": "agent-harness",
+  "description": "agent-harness workflow plugin",
+  "owner": {
+    "name": "agent-harness maintainers"
+  },
+  "plugins": [
+    {
+      "name": "agent-harness",
+      "source": "./plugins/agent-harness",
+      "description": "d",
+      "version": "0.0.1",
+      "category": "workflow"
+    }
+  ]
+}

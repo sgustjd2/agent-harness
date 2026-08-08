@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/OWNER/agent-harness/schemas/result.schema.json",
+  "title": "agent-harness run result (.agent-harness/runs/<run-id>/result.md frontmatter)",
+  "description": "PRD FR-013, §14.1, §15.7. Written for every terminal state.",
+  "type": "object",
+  "required": ["schema_version", "run_id", "status", "verification_status", "finished"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "run_id": { "type": "string", "pattern": "^[0-9]{8}-[0-9]{6}-[a-z0-9]+(-[a-z0-9]+)*$" },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "failed", "blocked", "cancelled"],
+      "description": "PRD §13.10 terminal states."
+    },
+    "verification_status": {
+      "type": "string",
+      "enum": ["passed", "failed", "unverified"],
+      "description": "PRD §15.7. 'completed' requires 'passed'; enforced by tests, not by this schema alone."
+    },
+    "finished": { "type": "string", "minLength": 1 },
+    "orchestration_mode": { "type": "string", "enum": ["direct", "sequential", "parallel"] },
+    "degraded_reason": { "type": ["string", "null"] },
+    "changed_files": { "type": "array", "items": { "type": "string" } },
+    "unfinished_tasks": { "type": "array", "items": { "type": "string", "pattern": "^T-[0-9]{3}$" } },
+    "gate_results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["gate_id", "classification", "required"],
+        "additionalProperties": false,
+        "properties": {
+          "gate_id": { "type": "string" },
+          "classification": {
+            "type": "string",
+            "enum": ["pass", "fail", "error", "timeout", "skipped", "flaky"]
+          },
+          "required": { "type": "boolean" },
+          "evidence_ref": { "type": "string", "pattern": "^E-[0-9]{3}$" }
+        }
+      }
+    }
+  }
+}

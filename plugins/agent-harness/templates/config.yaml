@@ -1,0 +1,23 @@
+# agent-harness project configuration
+# Schema: plugins/agent-harness/core/schemas/config.schema.json
+#
+# Gates are argv arrays, never shell strings (SEC-08). Nothing here is executed
+# without the user having put it here first (FR-010).
+
+# Template copied by init-project (M2). Gates start empty: detection PROPOSES commands,
+# the user approves, and only then are they written here.
+schema_version: 1
+project:
+  name: CHANGE_ME
+  type:
+    - generic
+vcs: git
+orchestration:
+  max_parallel_agents: 3
+  max_delegation_depth: 1
+verification:
+  gates:
+runs:
+  retention_count: 20
+  auto_prune: false
+  commit_evidence: false

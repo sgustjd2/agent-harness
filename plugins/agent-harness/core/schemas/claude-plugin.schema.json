@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/OWNER/agent-harness/schemas/claude-plugin.schema.json",
+  "title": "Claude Code plugin manifest (local compatibility schema)",
+  "$comment": "LOCAL COMPATIBILITY SCHEMA -- NOT AN OFFICIAL HOST SCHEMA. Host behaviour remains authoritative; this schema encodes only the subset of fields agent-harness relies on at M1, so it can catch our own mistakes early. A file passing this schema is not thereby guaranteed to be accepted by the host. Official documentation: https://code.claude.com/docs/en/plugins",
+  "description": "Validates plugins/agent-harness/.claude-plugin/plugin.json at M1.",
+  "type": "object",
+  "required": [
+    "name",
+    "description",
+    "version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "kebab-case; also the Skill namespace prefix",
+      "$comment": "Official-Documented: the plugin name is the unique identifier and Skill namespace, and the host validator rejects uppercase, spaces and special characters as a kebab-case error. Canonical kebab-case. The vendor states 'kebab-case, no spaces' and its validator rejects uppercase, spaces and special characters; rejection of leading, trailing and repeated hyphens is a Local-M1-Policy refinement of that term, not a separately published rule."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "author": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "email": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "homepage": {
+      "type": "string"
+    },
+    "repository": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string",
+      "minLength": 1
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

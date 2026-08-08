@@ -1,0 +1,49 @@
+# agent-harness project configuration
+# Schema: plugins/agent-harness/core/schemas/config.schema.json
+#
+# Gates are argv arrays, never shell strings (SEC-08). Nothing here is executed
+# without the user having put it here first (FR-010).
+
+schema_version: 1
+project:
+  name: example-python-service
+  type:
+    - python
+vcs: git
+orchestration:
+  max_parallel_agents: 3
+  max_delegation_depth: 1
+verification:
+  gates:
+    - id: py-test
+      kind: test
+      command:
+        - python
+        - -m
+        - pytest
+        - -q
+      required: true
+      timeout_seconds: 600
+    - id: py-lint
+      kind: lint
+      command:
+        - python
+        - -m
+        - ruff
+        - check
+        - .
+      required: true
+      timeout_seconds: 300
+    - id: py-typecheck
+      kind: typecheck
+      command:
+        - python
+        - -m
+        - mypy
+        - .
+      required: false
+      timeout_seconds: 600
+runs:
+  retention_count: 20
+  auto_prune: false
+  commit_evidence: false

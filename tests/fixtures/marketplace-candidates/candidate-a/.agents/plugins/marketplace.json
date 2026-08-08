@@ -1,0 +1,18 @@
+{
+  "name": "agent-harness",
+  "interface": {
+    "displayName": "agent-harness"
+  },
+  "plugins": [
+    {
+      "name": "agent-harness",
+      "source": "./plugins/agent-harness",
+      "description": "d",
+      "version": "0.0.1",
+      "category": "workflow",
+      "policy": {
+        "autoUpdate": false
+      }
+    }
+  ]
+}

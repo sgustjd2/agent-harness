@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/OWNER/agent-harness/schemas/claude-marketplace.schema.json",
+  "title": "Claude Code marketplace catalog (local compatibility schema)",
+  "$comment": "LOCAL COMPATIBILITY SCHEMA -- NOT AN OFFICIAL HOST SCHEMA. Host behaviour remains authoritative; this schema encodes only the subset of fields agent-harness relies on at M1, so it can catch our own mistakes early. A file passing this schema is not thereby guaranteed to be accepted by the host. Official documentation: https://code.claude.com/docs/en/plugin-marketplaces",
+  "description": "Validates .claude-plugin/marketplace.json at M1.",
+  "type": "object",
+  "required": [
+    "name",
+    "owner",
+    "plugins"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "$comment": "Official-Documented: the vendor schema table states 'Marketplace identifier (kebab-case, no spaces)'. M1.3 removed this pattern as an invented constraint -- that was a REGRESSION, corrected in M1.3.1. Canonical kebab-case. The vendor states 'kebab-case, no spaces' and its validator rejects uppercase, spaces and special characters; rejection of leading, trailing and repeated hyphens is a Local-M1-Policy refinement of that term, not a separately published rule."
+    },
+    "description": {
+      "type": "string"
+    },
+    "owner": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "email": {
+          "type": "string"
+        }
+      }
+    },
+    "plugins": {
+      "type": "array",
+      "minItems": 1,
+      "$comment": "An empty catalog is rejected: it registers a source that offers nothing.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "source"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "$comment": "Official-Documented: the vendor schema table states 'Plugin identifier (kebab-case, no spaces)', and the host validator reports a kebab-case error when a plugin name contains uppercase letters, spaces or special characters. Restored in M1.3.1 after an incorrect M1.3 removal. Canonical kebab-case. The vendor states 'kebab-case, no spaces' and its validator rejects uppercase, spaces and special characters; rejection of leading, trailing and repeated hyphens is a Local-M1-Policy refinement of that term, not a separately published rule."
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^\\./(?:(?!\\.\\.(?:/|$))[A-Za-z0-9._-]+/)*(?:(?!\\.\\.(?:/|$))[A-Za-z0-9._-]+)?$",
+            "$comment": "M1 uses a repo-relative path only."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "$comment": "Official-Documented as a free-form organisational string. NOT an identifier: the kebab-case pattern M1.1 imposed here WAS an invention and stays removed."
+          }
+        }
+      }
+    }
+  }
+}
