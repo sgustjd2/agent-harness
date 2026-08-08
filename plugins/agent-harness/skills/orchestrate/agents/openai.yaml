@@ -1,0 +1,17 @@
+# Invocation policy for orchestrate.
+#
+# Implicit invocation is DISABLED. This Skill writes source files, runs commands, and may
+# delegate to subagents -- the widest authority in the product. It starts only because
+# someone named it.
+#
+# That explicit invocation is the ONLY gate for ordinary planned work, and deliberately
+# so: the plan was already approved, and asking again per task would turn approval into a
+# formality people click through. The second gate is reserved for the actions that
+# actually deserve it -- destructive or irreversible ones -- and it is asked immediately
+# before each, not collected up front.
+#
+# Only the documented policy field is set. No tool grants, connectors, dependencies,
+# network permissions, or agent declarations belong here.
+
+policy:
+  allow_implicit_invocation: false

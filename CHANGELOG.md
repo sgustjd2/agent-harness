@@ -7,6 +7,58 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### M2 — shared Skill implementation (in progress)
 
+#### Added — `orchestrate` (slice 5)
+
+- **`orchestrate`, the fifth production Skill**, and the one with the widest authority:
+  it writes source, runs commands, and may delegate to subagents. Instruction-only and
+  dependency-free.
+- **The plan is the authority.** Requires a specific run id or an unambiguously latest
+  **ready** run. No ready plan means `Blocked` recommending `plan-work` — never a
+  synthesized plan. Ambiguous ready runs prompt a choice rather than a silent pick. A
+  cyclic or malformed plan is rejected, never repaired.
+- **Three `..._only` constraints** make that authority acceptable: planned commands only
+  (never inferred from `package.json`, a Makefile or CI files), planned paths only, and
+  the dependency graph respected.
+- Frontier from topological order; a failed dependency `skipped`s its dependents while
+  unrelated branches continue. Parallelism requires dependency independence, disjoint
+  `writes[]`, **and** a host that exposes it — otherwise sequential, and degradation is
+  always recorded with a non-empty `degraded_reason`. `max_parallel_agents` (default 3,
+  cap 5) and `max_delegation_depth` (default 1, cap 2) come from config and the schema.
+- **Scope is checked in both directions**: overlapping planned writes force sequential
+  execution beforehand; a `changed_files` entry outside `writes[]` afterwards is a scope
+  violation, and the plan is never widened to justify it.
+- **No automatic conflict merge.** Two results touching the same file are held and
+  reported for human resolution.
+- Explicit invocation authorises ordinary planned work; **destructive and irreversible
+  actions need separate approval immediately before the action** — force push, tree
+  deletion, migrations, destructive DB operations, history rewrites, permission
+  weakening. Without it the task is `blocked` and safe work continues.
+- Structured handoff preserved as returned, never paraphrased first. Only the previous
+  `summary`, `artifacts`, `open_questions` and a relevant memory excerpt travel onward —
+  **never the whole conversation**.
+- Terminal task statuses `done` / `failed` / `skipped`; `done` is the coordinator's
+  judgement after checking scope and criteria, not a worker's self-report.
+- **`orchestrate` never declares `completed`** — `verify-work` owns gate outcomes, and is
+  recommended rather than invoked automatically.
+- `references/orchestration-contract.md`, `handoff-contract.md`, `conflict-policy.md`.
+- `tests/test_orchestrate_skill.py` — 33 test functions.
+
+#### Changed — safety profiles (slice 5)
+
+- New profile **`plan-bounded-orchestration`**, the fourth. The three existing profiles
+  are semantically unchanged.
+- **Execution and delegation are now granted separately**, each as an explicit list.
+  `PROFILES_PERMITTING_EXECUTION` holds `bounded-verification` and
+  `plan-bounded-orchestration`; the new `PROFILES_PERMITTING_AGENT_SPAWN` holds only
+  `plan-bounded-orchestration`. `verify-work` runs commands but must never delegate — a
+  verifier that could delegate could delegate its way around its own gate list.
+- `executes_commands` stays out of `UNIVERSAL_SKILL_POLICY`, and a test asserts no
+  profile executes without appearing on the grant list.
+- **Deferred, and recorded as such:** the run-state runtime. This slice writes no
+  `evidence.md` or `result.md`, ships no `scripts/ah.py`, no helper library, no resume or
+  transaction engine, no queue or mailbox. `evidence_persistence: response-only` and
+  `run_state_runtime: deferred` are declared in the profile itself.
+
 #### Added — `doctor` (slice 4)
 
 - **`doctor`, the fourth production Skill.** Diagnoses agent-harness itself: host
