@@ -18,6 +18,7 @@ import pytest
 import yaml
 
 from conftest import REPO_ROOT
+from _common import FORBIDDEN_PRODUCTION_SKILLS
 from test_plan_work_skill import _frontmatter, _run
 
 pytestmark = pytest.mark.deterministic
@@ -352,24 +353,18 @@ def test_forbidden_command_classes_are_named(forbidden):
 # ------------------------------------------- 21-24. allowlist and no regression
 
 def test_milestone_allowlist_includes_verify_work():
-    """21."""
+    """21. Derived from the constant; exact membership lives in the newest slice's file."""
     from _common import ALLOWED_SKILLS, IMPLEMENTED_PRODUCTION_SKILLS
 
-    assert IMPLEMENTED_PRODUCTION_SKILLS == ["plan-work", "init-project", "verify-work"]
-    assert set(ALLOWED_SKILLS) == {"m1-discovery-fixture", "plan-work", "init-project",
-                                   "verify-work"}
+    assert "verify-work" in IMPLEMENTED_PRODUCTION_SKILLS
     assert {d.name for d in SKILLS.iterdir() if d.is_dir()} == set(ALLOWED_SKILLS)
 
 
-@pytest.mark.parametrize("name", [
-    "orchestrate", "refine-harness", "apply-refinement", "doctor",
-])
+@pytest.mark.parametrize("name", FORBIDDEN_PRODUCTION_SKILLS)
 def test_remaining_production_skills_are_still_rejected(plugin_tree, name):
-    """22."""
+    """22. Every not-yet-implemented name, derived from the constant."""
     import validate_skills
-    from _common import FORBIDDEN_PRODUCTION_SKILLS
 
-    assert name in FORBIDDEN_PRODUCTION_SKILLS
     assert not (SKILLS / name).exists()
 
     bad = plugin_tree / "skills" / name

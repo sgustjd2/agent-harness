@@ -66,6 +66,8 @@ REQUIRED_REFERENCES = {
                      "references/initialization-checklist.md"],
     "verify-work": ["references/execution-contract.md",
                     "references/evidence-template.md"],
+    "doctor": ["references/diagnostic-matrix.md",
+               "references/remediation-guide.md"],
 }
 
 # Never inside a Skill: these slices are instruction-only, so there is nothing to

@@ -1,0 +1,16 @@
+# Invocation policy for doctor.
+#
+# Implicit invocation is ENABLED. doctor is read-only and non-destructive: it runs no
+# command, writes no file, and repairs nothing. Reachability should match side effects,
+# and "why isn't this working" is exactly the moment a model should be able to reach a
+# diagnostic without the user having to know its name.
+#
+# This differs from init-project and verify-work, which keep implicit invocation off
+# because they write files and run commands respectively. Their approval gates are not
+# copied here -- there is nothing to approve when nothing is changed or executed.
+#
+# Only the documented policy field is set. No tool grants, connectors, dependencies,
+# network permissions, or agent declarations belong here.
+
+policy:
+  allow_implicit_invocation: true

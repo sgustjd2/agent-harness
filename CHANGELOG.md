@@ -7,6 +7,45 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### M2 — shared Skill implementation (in progress)
 
+#### Added — `doctor` (slice 4)
+
+- **`doctor`, the fourth production Skill.** Diagnoses agent-harness itself: host
+  identification, plugin layout, Skill integrity, `.agent-harness/` state, config and
+  schema version, memory integrity, verification-executable availability, Git presence,
+  managed marker blocks, and host compatibility. Instruction-only and dependency-free.
+- **The boundary is explicit: `doctor` diagnoses the harness, `verify-work` verifies
+  project code.** Both "check things", which is exactly why the split is stated in the
+  Skill, the references, and the tests.
+- Four statuses per check — `ok`, `warn`, `fail`, `unknown` — with three integrity rules:
+  `unknown` is never upgraded to `fail`, `warn` is never upgraded because a host differs,
+  and `unknown` is never hidden to reach a green report. `doctor` never stops on a
+  failure; a complete run means every applicable check was judged, not that all passed.
+- Overall health: `broken` on any `fail`, `degraded` on any `warn`, `unknown` on any
+  `unknown`, `healthy` only when everything applicable is `ok`.
+- **Executes nothing.** No verification gate, no `--version`, no `command -v` / `which` /
+  `where` / `Get-Command`, no Python or Git invocation. Executable availability is
+  established by static inspection or reported `unknown` — which is never a `fail`.
+- **Repairs nothing.** No config regeneration, no schema migration, no memory deletion,
+  no marker-block repair. Remediation commands are argv-array suggestions with
+  `automatic_remediation: false`, printed for a human.
+- `skills/doctor/references/diagnostic-matrix.md` — every check with its four status
+  conditions; `remediation-guide.md` — how fixes are offered and their limits.
+- `skills/doctor/agents/openai.yaml` — implicit invocation **enabled**, unlike
+  `init-project` and `verify-work`: a read-only diagnostic that writes and runs nothing
+  should be reachable when someone asks why things are broken.
+- `tests/test_doctor_skill.py` — 27 test functions.
+
+#### Changed — slice 4
+
+- `doctor` reuses the existing `read-only` profile **unchanged**. No new profile, no
+  widened permission, no write surface, and no behavioural change to the profile system.
+- **Fixed a latent crash in `check_path_portability.py`**: `report.fail()` was called
+  without its diagnostic code, so the violation branch raised `TypeError` instead of
+  reporting. Dormant since M1.1 because no canonical file had tripped a forbidden
+  pattern; `doctor` was the first to reach it. New code `PATH_NOT_PORTABLE`.
+- The `verify-work` allowlist and forbidden-Skill tests now derive from `_common`, as the
+  earlier slices' already do.
+
 #### Added — `verify-work` (slice 3)
 
 - **`verify-work`, the third production Skill, and the only one that runs commands.**

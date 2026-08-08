@@ -62,6 +62,7 @@ def check(plugin_root: pathlib.Path = PLUGIN_ROOT) -> int:
                 for pattern, label, rule in FORBIDDEN:
                     if pattern.search(line):
                         report.fail(
+                            "PATH_NOT_PORTABLE",
                             path,
                             f"line {lineno}: canonical layer uses {label} ({rule}); "
                             "move host-specific resolution into adapters/",
