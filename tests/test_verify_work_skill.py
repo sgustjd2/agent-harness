@@ -178,40 +178,140 @@ def test_working_directory_must_be_repository_contained(phrase):
     assert phrase.lower() in _body(), f"SKILL.md omits {phrase!r}"
 
 
-# ---------------------------------------------- 12-17. status and result rules
+# ------------------------- classification model (PRD §15.4) and verification_status
+
+CLASSIFICATIONS = ["pass", "fail", "error", "timeout", "skipped", "flaky"]
+
+
+@pytest.mark.parametrize("classification,definition", [
+    # 1 exit 0 => pass
+    ("pass", "| `pass` | process started, exit code 0 |"),
+    # 2 non-zero => fail
+    ("fail", "| `fail` | process started normally, exit code non-zero |"),
+    # 3/4 missing executable or permission denial => error, NOT Blocked
+    ("error", "| `error` | executable not found, permission denied, or the process "
+              "could not execute for another environment or runtime reason |"),
+    # 5 timeout => timeout, not generic Failed
+    ("timeout", "| `timeout` | process started, exceeded its timeout, and was "
+                "terminated because of it |"),
+    # 6 budget exhaustion => skipped
+    ("skipped", "| `skipped` | the gate was selected but deliberately not run by "
+                "execution control flow — budget exhaustion, or a prd-defined skip "
+                "condition |"),
+    # 8 disagreeing rerun => flaky
+    ("flaky", "| `flaky` | `flaky_policy: rerun-once`, the first classification was "
+              "`fail`, and the rerun disagreed |"),
+])
+def test_each_prd_classification_is_defined(classification, definition):
+    """The six PRD classifications, each with the condition that produces it."""
+    assert definition in _body(), f"SKILL.md does not define {classification!r} correctly"
+
+
+@pytest.mark.parametrize("distinction", [
+    # 3/4 error must not collapse into the pre-execution category
+    "**`error` is not `blocked`.**",
+    # 5 timeout must not collapse into fail
+    "**`timeout` is not `fail`.**",
+    # 6 skipped must not collapse into never-run
+    '**`skipped` is not "never run".**',
+])
+def test_classifications_are_not_collapsed(distinction):
+    """The three collisions the earlier four-status model caused, stated explicitly."""
+    assert distinction in _body(), f"SKILL.md omits the distinction: {distinction!r}"
+
+
+def test_blocked_stays_a_pre_execution_concept():
+    """`Blocked` describes never reaching a launch; it is not a process outcome."""
+    body = _body()
+    assert "a `blocked` gate never reaches a process launch, so it has no process " \
+           "outcome to classify" in body
+    for pre_exec in ["no configured gates at all", "stale execution approval",
+                     "an unsafe repository path"]:
+        assert pre_exec in body, f"SKILL.md omits the pre-execution case {pre_exec!r}"
+
 
 @pytest.mark.parametrize("rule", [
-    # 13 required-gate Passed
-    "`passed` | every required gate ran **and** every one `passed`",
-    # 14 required-gate Failed
-    "`failed` | at least one required gate `failed`",
-    # 15 required-gate Blocked
-    "`blocked` | no required gate `failed`, and at least one is `blocked`",
-    "`not run` | no required gate started",
-    # 16 optional failures stay visible
-    "optional failures present",
-    # 17 nothing configured
-    "if no gate is configured, stop and report `blocked`",
-    # no false success
-    "a command that exists is not a command that passed",
+    # 9 required fail/error/timeout => failed
+    "| `failed` | any required gate is `fail`, `error`, or `timeout` |",
+    # 10 required skipped/flaky/blocked/never-ran => unverified
+    "| `unverified` | any required gate is `skipped` or `flaky`, was `blocked` before "
+    "execution, or never ran |",
+    "| `passed` | every required gate is classified `pass` |",
 ])
-def test_result_rules_are_stated(rule):
+def test_verification_status_rules_are_stated(rule):
+    """verification_status is computed from required gates only."""
     assert rule in _body(), f"SKILL.md omits the rule: {rule!r}"
 
 
-def test_timeout_counts_as_failed_not_blocked():
-    """12. A gate that started and timed out ran; it did not fail to start."""
+def test_failed_and_unverified_are_distinguished():
+    """Conflating them would report 'nothing was established' as 'something is wrong'."""
     body = _body()
-    assert "started and exited non-zero, **or** started and timed out" in body
-    assert "`blocked` | could not safely start" in body
+    assert "`failed` means the checks ran and something is wrong with the work; " \
+           "`unverified` means the checks did not establish anything" in body
 
 
-def test_evidence_template_shows_no_passing_example():
-    """A template with a worked `Passed` example is a sentence someone can copy."""
+@pytest.mark.parametrize("rule", [
+    # 7 rerun applies only to fail
+    "only `flaky_policy: rerun-once` produces a retry, and only for classification "
+    "**`fail`**",
+    "**never rerun `error`.**",
+    "**never rerun `timeout`.**",
+    "rerun **exactly once** — never a loop",
+    # flaky never becomes pass
+    "**`flaky` is never promoted to `pass`**",
+    "record **both attempts** separately",
+])
+def test_flaky_rules_are_stated(rule):
+    """7/8. rerun-once is narrow, and its result is never rounded up."""
+    assert rule in _body(), f"SKILL.md omits the flaky rule: {rule!r}"
+
+
+def test_budget_exhaustion_is_skipped_not_not_run():
+    """6. Gates the run reached and passed over are `skipped`, not 'never started'."""
+    body = _body()
+    assert "every remaining gate is classified **`skipped`**" in body
+    assert "`verification_status` becomes `unverified`" in body
+
+
+@pytest.mark.parametrize("rule", [
+    "optional failures present",                                # optional stay visible
+    "if no gate is configured, stop and report `blocked`",      # nothing configured
+    "a command that exists is not a command that passed",       # no false success
+])
+def test_reporting_rules_are_stated(rule):
+    assert rule in _body(), f"SKILL.md omits the rule: {rule!r}"
+
+
+@pytest.mark.parametrize("field", [
+    "gate id", "kind", "required", "command[]",
+    "repository-relative working directory", "started or not started",
+    "exit code when available", "duration when available", "classification",
+    "timeout information", "bounded output excerpt",
+])
+def test_evidence_fields_are_required(field):
+    """Every field the evidence contract owes per gate."""
+    assert field in _body(), f"SKILL.md omits the evidence field {field!r}"
+
+
+def test_evidence_template_uses_the_classification_vocabulary():
+    """The template must carry both layers, and no fabricated success."""
     text = (VERIFY / "references" / "evidence-template.md").read_text(encoding="utf-8")
-    assert "Overall: Not Run" in text
-    assert "Status: Passed" not in text
+    assert "Classification: <pass|fail|error|timeout|skipped|flaky>" in text
+    assert "Verification status: <passed|failed|unverified>" in text
+    # Illustrative example must never show a run that succeeded.
+    assert "Verification status: unverified" in text
+    assert "Classification: pass" not in text
     assert "illustrative" in text.lower()
+
+
+def test_execution_contract_reference_agrees_with_the_skill():
+    """The reference must not drift into the withdrawn four-status vocabulary."""
+    contract = " ".join((VERIFY / "references" / "execution-contract.md")
+                        .read_text(encoding="utf-8").lower().split())
+    for value in CLASSIFICATIONS:
+        assert f"`{value}`" in contract, f"execution contract omits {value!r}"
+    assert "any required gate is `fail`, `error`, or `timeout`" in contract
+    assert "`error` is **not** `blocked`" in contract
 
 
 # ------------------------------------------------- 18-19. references and hygiene

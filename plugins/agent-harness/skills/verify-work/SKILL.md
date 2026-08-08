@@ -111,59 +111,102 @@ milestone: sequential keeps output attribution obvious, keeps timeout behaviour
 deterministic, and keeps two build tools from colliding in the same tree. Orchestration
 is a later milestone, and adding it here quietly would pre-empt that decision.
 
-Each gate runs **once**, unless `flaky_policy: rerun-once` is configured — then a gate
-whose result is a plain non-zero exit may be rerun **exactly once**. A gate that failed
-because the command was missing, was denied, or timed out is **never** retried: those
-repeat identically and only burn the budget. When two runs disagree the gate is **flaky**,
-which is **not** a pass — record both runs separately, with command, exit code and
-excerpt for each.
+Each gate runs **once**, unless `flaky_policy: rerun-once` is configured. See the flaky
+rules below — the retry applies to exactly one classification, not to failure in general.
 
-If the run's verification budget is exhausted, remaining gates are `Not Run` with the
-reason recorded, and verification is unverified rather than complete.
+If the run's verification budget is exhausted, every remaining gate is classified
+**`skipped`**, with the reason recorded, and `verification_status` becomes `unverified`.
+Those gates were selected and planned for execution, so they are not "never started" in
+the pre-execution sense — the run reached them and chose not to spend the budget.
 
-## Statuses
+## Two layers: blocking, then classification
 
-Exactly four, per gate:
+These are different questions and must not be merged.
 
-| Status | Meaning |
+**Layer 1 — pre-execution blocking.** Before any process is attempted, a gate can be
+`Blocked`: no configured gates at all, stale execution approval, configuration invalid
+enough that the gate never becomes executable, an unsafe repository path, argv that the
+host cannot represent safely, or no execution capability available. A `Blocked` gate never
+reaches a process launch, so it has no process outcome to classify.
+
+**Layer 2 — process classification.** Once a valid configured gate reaches an attempted
+process launch, the outcome is classified with the PRD vocabulary, and only that
+vocabulary:
+
+| Classification | Meaning |
 | :--- | :--- |
-| `Not Run` | execution never started |
-| `Passed` | started, exited 0, within timeout |
-| `Failed` | started and exited non-zero, **or** started and timed out |
-| `Blocked` | could not safely start |
+| `pass` | process started, exit code 0 |
+| `fail` | process started normally, exit code non-zero |
+| `error` | executable not found, permission denied, or the process could not execute for another environment or runtime reason |
+| `timeout` | process started, exceeded its timeout, and was terminated because of it |
+| `skipped` | the gate was selected but deliberately not run by execution control flow — budget exhaustion, or a PRD-defined skip condition |
+| `flaky` | `flaky_policy: rerun-once`, the first classification was `fail`, and the rerun disagreed |
 
-`Blocked` covers invalid gate configuration, an unavailable executable, an unsafe working
-directory, argv that cannot be represented safely, a missing execution capability, and
-stale approval.
+Three distinctions matter enough to state directly:
 
-**A command that exists is not a command that passed.** Never report `Passed` without an
-observed exit code of 0, and never carry a previous run's result forward as this run's
-result unless the user explicitly asked for reuse.
+- **`error` is not `Blocked`.** A missing executable is discovered by attempting to launch
+  the process. The gate was valid and approved; the environment failed it. Reporting that
+  as a pre-execution block would hide an environment problem inside a configuration
+  category.
+- **`timeout` is not `fail`.** The process started and was killed by us. That is a
+  different diagnosis from a test suite that ran and reported failures, and it is the one
+  case where the exit code says nothing useful.
+- **`skipped` is not "never run".** A gate skipped after planning was reached and passed
+  over; calling it not-run implies the run never got that far.
 
-## Overall result
+**A command that exists is not a command that passed.** `pass` requires an observed exit
+code of 0 from this run, and a previous run's result is never carried forward unless the
+user explicitly asked for reuse.
 
-Computed conservatively from **required** gates only:
+## Flaky
 
-| Overall | Condition |
+Only `flaky_policy: rerun-once` produces a retry, and only for classification **`fail`**.
+
+- **Never rerun `error`.** A missing executable stays missing.
+- **Never rerun `timeout`.** It will exhaust the same bound again and spend the budget.
+- Rerun **exactly once** — never a loop.
+- If the two attempts disagree, the gate is **`flaky`**.
+- **`flaky` is never promoted to `pass`**, however tempting the second green result looks.
+- Record **both attempts** separately, each with its command, exit code and excerpt.
+
+## verification_status
+
+The authoritative outcome, computed from **required** gates only:
+
+| `verification_status` | Condition |
 | :--- | :--- |
-| `Passed` | every required gate ran **and** every one `Passed` |
-| `Failed` | at least one required gate `Failed` |
-| `Blocked` | no required gate `Failed`, and at least one is `Blocked` |
-| `Not Run` | no required gate started |
+| `passed` | every required gate is classified `pass` |
+| `failed` | any required gate is `fail`, `error`, or `timeout` |
+| `unverified` | any required gate is `skipped` or `flaky`, was `Blocked` before execution, or never ran |
 
-Optional-gate failures never flip the overall result on their own — and they are never
-hidden. When required gates all pass while optional ones fail, the overall result may
-stay `Passed`, but the report must say **optional failures present** and list them.
+`failed` and `unverified` say different things and must not be conflated: `failed` means
+the checks ran and something is wrong with the work; `unverified` means the checks did not
+establish anything, so the work's state is unknown.
 
-When verification is anything other than `Passed`, say plainly that the work is
-**unverified** and name the gates responsible. A result that reads like success while a
-required gate did not pass is the single worst output this Skill can produce.
+Optional gates never change `verification_status`, and are never hidden. When every
+required gate passes while optional ones do not, report **optional failures present** and
+list them.
+
+A one-line overall summary may be shown for readability, but it is derived from
+`verification_status` and the classifications — never the source of truth, and never a
+substitute for them.
+
+Whenever `verification_status` is not `passed`, say plainly that the work is
+**unverified or failed**, and name the gates responsible. A report that reads like success
+while a required gate did not pass is the single worst output this Skill can produce.
 
 ## Evidence
 
-Per executed gate report: id, kind, argv command, repository-relative working directory,
-whether it started, exit code when available, timeout status, duration when the host
-exposes it, final status, and a concise evidence summary.
+Report per gate: **gate id**, **kind**, **required**, **command[]** as argv,
+**repository-relative working directory**, **started or not started**, **exit code when
+available**, **duration when available**, **classification**, **timeout information**, and
+a **bounded output excerpt or evidence summary**.
+
+Report for the run as a whole: **`verification_status`** — `passed`, `failed`, or
+`unverified`.
+
+A gate reran under `flaky_policy: rerun-once` contributes **two** evidence entries, one
+per attempt.
 
 Bound the output. Prefer a short failure reason, the relevant tail, a test summary, or
 the diagnostic lines — not unlimited stdout and stderr.

@@ -26,8 +26,17 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   config. Sequential execution in declared order; no concurrency, no retry except a
   configured `flaky_policy: rerun-once`, which never retries a missing executable, a
   permission denial, or a timeout.
-- Statuses `Not Run` / `Passed` / `Failed` / `Blocked`, with overall computed from
-  required gates only. Optional failures never flip the result and are never hidden.
+- **Two layers, per PRD §15.4.** Pre-execution `Blocked` (no configured gates, stale
+  approval, config that never becomes executable, unsafe path, unrepresentable argv, no
+  execution capability) is kept separate from process classification, which uses the PRD
+  vocabulary exactly: `pass`, `fail`, `error`, `timeout`, `skipped`, `flaky`. `error` is
+  not `Blocked`, `timeout` is not `fail`, and `skipped` is not "never run".
+- **`verification_status`** is the authoritative outcome, from required gates only:
+  `passed` when every required gate is `pass`; `failed` on any `fail`/`error`/`timeout`;
+  `unverified` on any `skipped`, `flaky`, pre-execution `Blocked`, or never-run required
+  gate. `failed` and `unverified` are not interchangeable -- one means something is wrong,
+  the other means nothing was established. Optional failures never change it and are
+  never hidden.
 - Bounded, redacted evidence; results returned in the response, no evidence file in this
   milestone.
 - `skills/verify-work/references/execution-contract.md` and `evidence-template.md`.
