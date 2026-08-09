@@ -321,18 +321,24 @@ def test_ns19_symlink_escape(plugin_tree, tmp_path):
     assert "SYMLINK_ESCAPE" in codes, codes
 
 
-def test_ns20_production_skill_in_installable_root(plugin_tree):
-    """NS-20: a planned production Skill name appears in the installable root."""
+def test_ns20_unexpected_skill_in_installable_root(plugin_tree):
+    """NS-20: a Skill that is not on the milestone allowlist appears in the root.
+
+    Originally this used an unimplemented production Skill name. All seven are now
+    implemented, so `FORBIDDEN_PRODUCTION_SKILLS` is empty and that scenario no longer
+    exists. The boundary it protected still does: the installable root admits exactly the
+    Skills on the allowlist, and anything else is rejected.
+    """
     import validate_skills
 
-    bad = plugin_tree / "skills" / "apply-refinement"
+    bad = plugin_tree / "skills" / "not-a-planned-skill"
     bad.mkdir(parents=True)
     (bad / "SKILL.md").write_text(
-        "---\nname: apply-refinement\ndescription: placeholder\n---\n\nplaceholder\n",
+        "---\nname: not-a-planned-skill\ndescription: placeholder\n---\n\nplaceholder\n",
         encoding="utf-8")
     status, codes = _run(validate_skills.check, plugin_tree)
     assert status != 0
-    assert "PRODUCTION_SKILL_IN_ROOT" in codes, codes
+    assert "FORBIDDEN_COMPONENT_IN_ROOT" in codes, codes
 
 
 def test_ns21_production_hook_in_installable_root(plugin_tree):

@@ -292,12 +292,16 @@ def test_milestone_allowlist_includes_doctor():
     assert {d.name for d in SKILLS.iterdir() if d.is_dir()} == set(ALLOWED_SKILLS)
 
 
-@pytest.mark.parametrize("name", FORBIDDEN_PRODUCTION_SKILLS)
-def test_remaining_production_skills_are_still_rejected(plugin_tree, name):
-    """24. orchestrate, refine-harness, apply-refinement."""
+# FORBIDDEN_PRODUCTION_SKILLS is empty now that all seven are implemented. An
+# empty parametrize SKIPS silently, so the guard would stop running without
+# anyone noticing -- fall back to a name that is not on the allowlist.
+@pytest.mark.parametrize(
+    "name", FORBIDDEN_PRODUCTION_SKILLS or ["not-a-planned-skill"])
+def test_names_outside_the_allowlist_are_rejected(plugin_tree, name):
+    """24. Every planned Skill is implemented now, so this exercises the same boundary
+    with a name that is not on the allowlist."""
     import validate_skills
 
-    assert name in {"orchestrate", "refine-harness", "apply-refinement"}
     assert not (SKILLS / name).exists()
 
     bad = plugin_tree / "skills" / name
@@ -307,7 +311,8 @@ def test_remaining_production_skills_are_still_rejected(plugin_tree, name):
         encoding="utf-8")
     status, codes = _run(validate_skills.check, plugin_tree)
     assert status != 0
-    assert "PRODUCTION_SKILL_IN_ROOT" in codes, codes
+    assert {"PRODUCTION_SKILL_IN_ROOT", "FORBIDDEN_COMPONENT_IN_ROOT"} & set(codes), \
+        codes
 
 
 @pytest.mark.parametrize("skill,profile,executes", [

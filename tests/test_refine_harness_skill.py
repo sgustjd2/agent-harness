@@ -87,9 +87,8 @@ def test_proposal_only_mutation_profile_is_selected():
     from _common import SKILL_PROFILE, SKILL_SAFETY_PROFILES
 
     assert SKILL_PROFILE["refine-harness"] == "proposal-only-mutation"
-    assert set(SKILL_SAFETY_PROFILES) == {
-        "read-only", "approval-gated-mutation", "bounded-verification",
-        "plan-bounded-orchestration", "proposal-only-mutation"}
+    # The exact roster belongs to the newest slice's file; this asserts it exists.
+    assert "proposal-only-mutation" in SKILL_SAFETY_PROFILES
 
 
 @pytest.mark.parametrize("key,expected", [
@@ -162,8 +161,8 @@ def test_execution_and_spawn_grants_are_unchanged():
     from _common import (PROFILES_PERMITTING_AGENT_SPAWN, PROFILES_PERMITTING_EXECUTION,
                          SKILL_SAFETY_PROFILES)
 
-    assert PROFILES_PERMITTING_EXECUTION == ["bounded-verification"]
-    assert PROFILES_PERMITTING_AGENT_SPAWN == ["plan-bounded-orchestration"]
+    assert "proposal-only-mutation" not in PROFILES_PERMITTING_EXECUTION
+    assert "proposal-only-mutation" not in PROFILES_PERMITTING_AGENT_SPAWN
     executing = [n for n, p in SKILL_SAFETY_PROFILES.items() if p["executes_commands"]]
     spawning = [n for n, p in SKILL_SAFETY_PROFILES.items() if p.get("spawns_agents")]
     assert sorted(executing) == sorted(PROFILES_PERMITTING_EXECUTION)
@@ -409,21 +408,20 @@ def test_an_item_without_evidence_refs_is_schema_invalid():
 def test_milestone_allowlist_includes_refine_harness():
     from _common import ALLOWED_SKILLS, IMPLEMENTED_PRODUCTION_SKILLS
 
-    assert IMPLEMENTED_PRODUCTION_SKILLS == [
-        "plan-work", "init-project", "verify-work", "doctor", "orchestrate",
-        "refine-harness"]
-    assert set(ALLOWED_SKILLS) == {
-        "m1-discovery-fixture", "plan-work", "init-project", "verify-work", "doctor",
-        "orchestrate", "refine-harness"}
+    assert "refine-harness" in IMPLEMENTED_PRODUCTION_SKILLS
     assert {d.name for d in SKILLS.iterdir() if d.is_dir()} == set(ALLOWED_SKILLS)
 
 
-@pytest.mark.parametrize("name", FORBIDDEN_PRODUCTION_SKILLS)
-def test_apply_refinement_is_still_rejected(plugin_tree, name):
-    """25. It is now the only remaining forbidden production Skill."""
+# FORBIDDEN_PRODUCTION_SKILLS is empty now that all seven are implemented. An
+# empty parametrize SKIPS silently, so the guard would stop running without
+# anyone noticing -- fall back to a name that is not on the allowlist.
+@pytest.mark.parametrize(
+    "name", FORBIDDEN_PRODUCTION_SKILLS or ["not-a-planned-skill"])
+def test_names_outside_the_allowlist_are_rejected(plugin_tree, name):
+    """25. apply-refinement is implemented now, so this exercises the same boundary
+    with a name that is not on the allowlist."""
     import validate_skills
 
-    assert FORBIDDEN_PRODUCTION_SKILLS == ["apply-refinement"]
     assert not (SKILLS / name).exists()
 
     bad = plugin_tree / "skills" / name
@@ -433,7 +431,8 @@ def test_apply_refinement_is_still_rejected(plugin_tree, name):
         encoding="utf-8")
     status, codes = _run(validate_skills.check, plugin_tree)
     assert status != 0
-    assert "PRODUCTION_SKILL_IN_ROOT" in codes, codes
+    assert {"PRODUCTION_SKILL_IN_ROOT", "FORBIDDEN_COMPONENT_IN_ROOT"} & set(codes), \
+        codes
 
 
 @pytest.mark.parametrize("skill,profile", [

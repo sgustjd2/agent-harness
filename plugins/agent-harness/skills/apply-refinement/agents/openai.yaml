@@ -1,0 +1,16 @@
+# Invocation policy for apply-refinement -- Gate A (FR-025.1-A).
+#
+# Implicit invocation is DISABLED. This Skill changes memory and configuration, so a model
+# must not be able to select it by reading a prompt. Explicit $apply-refinement still
+# works, which is the point: the gate blocks model-initiated selection, not the user.
+#
+# THIS IS NOT THE APPROVAL GATE. Gate B -- the change-approval gate -- lives in the Skill
+# body and holds on every host, including hosts with no invocation-policy mechanism, hosts
+# that ignore the policy, and copies of this Skill reached through a fallback path. Gate A
+# is one layer of defence in depth and never substitutes for Gate B.
+#
+# Only the documented policy field is set. No tool grants, connectors, dependencies,
+# network permissions, or agent declarations belong here.
+
+policy:
+  allow_implicit_invocation: false

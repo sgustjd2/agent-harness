@@ -5,7 +5,56 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### M2 — shared Skill implementation (in progress)
+### M2 — shared Skill implementation (complete)
+
+#### Added — `apply-refinement` (slice 7, final)
+
+- **`apply-refinement`, the seventh and final production Skill.** Applies one approved
+  proposal, verifies the result, and records how to undo it. The only Skill that changes
+  memory or configuration. Instruction-only and dependency-free.
+- **Two independent gates (FR-025.1).** Gate A — `agents/openai.yaml` disables implicit
+  invocation, so a model cannot select it from a prompt. Gate B — the eight-clause
+  change-approval gate in the body: inspect the specific proposal, present the exact file
+  list and diff, require confirmation bound to that proposal, re-confirm before writing,
+  refuse stale/missing/ambiguous/mismatched approval, never read an earlier unrelated
+  approval as permission, stop with no changes when verification is impossible, and never
+  persist approval as a replayable token (SEC-20). **Gate B holds where Gate A does not
+  exist** — a host without an invocation-policy mechanism, one that ignores it, or a
+  fallback copy of the Skill. Gate A is defence in depth and never a substitute.
+- Explicit invocation is not approval; neither is a message from an agent or subagent, on
+  either host.
+- **Staleness is checked before applying.** Where an item carries a `current_hash` it is
+  verified first: a mismatch means the file changed after the proposal was written, so the
+  diff a human approved is not the diff that would land — stop and report the drift. This
+  is why `refine-harness` never fabricates a hash.
+- **Rollback is recorded before the first write** — Git `HEAD` plus target paths, or a
+  `.backup/` copy of every original when there is no repository. **No rollback information
+  means no application.** The revert command is presented, never executed: an automatic
+  `git checkout` could discard work the user had in progress alongside the change.
+- **Verification failure reverts everything**, then `status: failed`. A failed revert
+  stops and reports the exact partial state rather than guessing. Success is never
+  reported while any change remains unreverted.
+- Only the project's **configured** verification gates may run — the same argv/timeout
+  entries `verify-work` uses. No inferred commands, no installs, no Git mutation.
+- **`skill` items are refused outright.** `plugins/agent-harness/skills/**` is absent from
+  the write roots and there is no code path for self-modification — not a disabled one,
+  not a guarded one.
+- `references/approval-gates.md`, `application-contract.md`, `rollback-contract.md`.
+- `tests/test_apply_refinement_skill.py` — 34 test functions.
+
+#### Changed — safety profiles and the completed milestone
+
+- New profile **`approved-proposal-application`**, the sixth. The five existing ones are
+  semantically unchanged.
+- `PROFILES_PERMITTING_EXECUTION` now holds **two** profiles — `bounded-verification` and
+  `approved-proposal-application` — both restricted to configured gates. Agent spawning
+  remains granted only to `plan-bounded-orchestration`, a third profile.
+- **All seven planned production Skills are implemented**, so
+  `FORBIDDEN_PRODUCTION_SKILLS` is now empty.
+- **Fixed a silent coverage loss this exposed:** five parameterized guards drew their
+  cases from that list, and an empty parametrize *skips* rather than failing — the checks
+  would have stopped running with nobody noticing. Each now falls back to a name outside
+  the allowlist, so the boundary is still exercised, and NS-20 was retargeted the same way.
 
 #### Added — `refine-harness` (slice 6)
 
