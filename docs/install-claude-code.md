@@ -15,4 +15,7 @@ present them as two steps, because they are.
 Also covered: local-path registration for restricted networks, `--plugin-dir` for
 development, and how to pin a version.
 
-**Nothing is installed today**: the seven Skills are M1 placeholders.
+**Status.** All seven Skills are implemented as of M2 — they are no longer
+placeholders. This installation guide itself is still a draft, to be written in
+M3. The verified way to load the plugin today is session-scoped
+`--plugin-dir` (Claude); marketplace installation has not been exercised.

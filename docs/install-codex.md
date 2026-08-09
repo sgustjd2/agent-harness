@@ -16,4 +16,7 @@ The registration section will not claim the plugin is installed, and no CLI inst
 subcommand will be shown, because none is documented. Whether a CLI-only installation
 path exists is an open question — see `docs/compatibility.md`.
 
-**Nothing is installed today**: the seven Skills are M1 placeholders.
+**Status.** All seven Skills are implemented as of M2 — they are no longer
+placeholders. This installation guide itself is still a draft, to be written in
+M4. The verified way to load the plugin today is session-scoped
+`--plugin-dir` (Claude); marketplace installation has not been exercised.
