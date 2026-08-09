@@ -467,7 +467,7 @@ def test_milestone_allowlist_includes_orchestrate():
 
 @pytest.mark.parametrize("name", FORBIDDEN_PRODUCTION_SKILLS)
 def test_remaining_production_skills_are_still_rejected(plugin_tree, name):
-    """30. refine-harness and apply-refinement."""
+    """30. apply-refinement."""
     import validate_skills
 
     assert not (SKILLS / name).exists()
