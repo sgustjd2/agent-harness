@@ -25,6 +25,10 @@ INIT = SKILLS / "init-project"
 SKILL_MD = INIT / "SKILL.md"
 
 
+def _flat(path) -> str:
+    return " ".join(path.read_text(encoding="utf-8").lower().split())
+
+
 # ---------------------------------------------------------------- 1-3. basics
 
 def test_init_project_validates_as_shipped():
@@ -343,3 +347,27 @@ def test_checklist_covers_the_mutation_safeguards():
     for phrase in ["before writing", "approval", "stale", "overwrite", "idempot",
                    "gitignore", "no command", "user-scope", "secret", "conflict"]:
         assert phrase in text, f"initialization checklist omits {phrase!r}"
+
+
+# ------------------------------------------- D-02: interpreter-based gates
+
+@pytest.mark.parametrize("rule", [
+    "**name the project's own interpreter, never the bare one.**",
+    "a bare name is resolved by `path` when the gate runs",
+    "no verification status can distinguish that from a real failure",
+])
+def test_proposed_interpreter_must_be_the_projects(rule):
+    """D-02. A bare `python` can resolve to a stub that runs nothing and exits non-zero.
+
+    verify-work then reports `fail` on passing tests, correctly per the classification
+    rules — the process really did run. The defect is upstream, in what gets proposed.
+    """
+    assert rule in _flat(SKILL_MD), f"SKILL.md omits: {rule!r}"
+
+
+def test_config_template_no_longer_proposes_a_bare_python():
+    """The shipped candidate command must not hand anyone the broken default."""
+    template = (INIT / "references" / "config-template.yaml").read_text(encoding="utf-8")
+    assert '["python", "-m", "pytest"' not in template
+    assert '["<interpreter>", "-m", "pytest", "-q"]' in template
+    assert ".venv/Scripts/python.exe" in template   # the Windows case that fails

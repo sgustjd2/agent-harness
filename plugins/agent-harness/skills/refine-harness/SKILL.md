@@ -51,6 +51,23 @@ circular: approval is given against a shown proposal, and this Skill is what pro
 one — the artifact would have to exist before it could be authorized to exist. The real
 gate sits one stage later, on application, where the change actually happens.
 
+## Prerequisite — persisted run artifacts
+
+**This Skill reads run artifacts it does not create.** It needs `evidence.md` and
+`result.md` to exist on disk, and those are written by the **run-state runtime**, which is
+deferred to a later milestone.
+
+Until that runtime lands, `orchestrate` and `verify-work` both return evidence **in the
+response only** and persist nothing. So in a project running the current milestone there
+are usually **no source runs to refine**, and the correct output is the one below: **no
+proposal**, naming the missing artifact.
+
+That is expected, not a malfunction. **Do not work around it** — do not accept a
+conversation transcript in place of `evidence.md`, do not reconstruct evidence from a
+response, and do not relax the evidence-reference requirement to produce something. A
+proposal whose items cite evidence that was never written down is exactly the unauditable
+artifact the evidence rule exists to prevent.
+
 ## Input
 
 One or more identified runs. Each source run needs its `plan.md`, `evidence.md` and
