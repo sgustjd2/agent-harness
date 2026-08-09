@@ -59,6 +59,26 @@ Three rules that matter more than the definitions:
   check still gets a status. A complete run means every check was judged — not that
   everything was `ok`.
 
+### Checks that do not apply
+
+A check whose **Applies** condition in the diagnostic matrix is unmet is reported **`not
+applicable`**, with the reason — for example *"not applicable: the project is not
+initialized"*.
+
+`not applicable` is **not a fifth status**. It says the check was never in scope, so there
+was nothing to judge; the four statuses all describe an outcome of judging something.
+
+- **`not applicable` never affects the overall result** — not `broken`, not `degraded`,
+  not `unknown`.
+- **Do not report it as `unknown`.** `unknown` means the state could not be determined;
+  here it is known precisely, and reporting "I could not tell" would send someone
+  investigating a check that was never relevant.
+- **Do not omit the section.** The report shape is fixed, so an empty section says *not
+  applicable* and why.
+
+This is the common case on a first run: before `init-project`, the Configuration, Memory
+and Verification-executable sections have nothing in scope.
+
 ## Findings
 
 Every **`fail`** carries: finding ID, concise reason, affected path or component,
@@ -255,7 +275,8 @@ Then: **Environment**, **Plugin installation**, **Skill integrity**, **Project s
 **Compatibility**, **Findings**, **Summary**, **Recommended next action**.
 
 Each finding carries ID, Check, Status, Expected, Observed, Impact, Remediation, and
-Remediation command (argv or none). The summary counts `ok`, `warn`, `fail` and `unknown`.
+Remediation command (argv or none). The summary counts `ok`, `warn`, `fail` and `unknown`,
+and lists `not applicable` separately — it is a scope statement, not an outcome.
 
 Overall is computed in this order:
 

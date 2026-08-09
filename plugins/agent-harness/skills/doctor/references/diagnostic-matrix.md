@@ -5,6 +5,12 @@ cannot apply to the current project are reported as not applicable, not as failu
 
 `unknown` is a real answer everywhere in this table. It is never upgraded to `fail`.
 
+**The `Applies` column is load-bearing.** When its condition is unmet the check is reported
+**`not applicable`** with the reason, which is a statement about scope rather than one of
+the four outcome statuses — and it never affects the overall result. Before
+`init-project` runs, most of the project, configuration and memory rows below are exactly
+that.
+
 ## Environment
 
 | ID | Diagnostic | Applies | `ok` | `warn` | `fail` | `unknown` |

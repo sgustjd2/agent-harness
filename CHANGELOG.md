@@ -5,7 +5,7 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Fixed — contract dry-run findings D-01, D-02, D-06
+### Fixed — contract dry-run findings D-01 through D-06
 
 Found by following the Skill instructions literally against a disposable repository
 (`docs/m2-contract-dryrun.md`). None of the three was reachable by the existing suite,
@@ -32,7 +32,24 @@ because every test validates a Skill **in isolation**.
   asserted the stale sentence, which is how completing M2 made the product wrong while the
   suite stayed green.
 
-D-03, D-04 and D-05 remain open decisions; none blocks the pilot.
+- **D-03 — `doctor` had no vocabulary for a check that does not apply.** Four statuses, a
+  fixed report shape, and an `Applies` column with nothing joining them; the first run
+  anyone performs hits it. Now reported as `not applicable` with a reason — explicitly not
+  a fifth status, never affecting the overall result, and never collapsed into `unknown`,
+  which claims the opposite.
+- **D-04 — `init-project` created three memory files without saying what goes in them.**
+  The obvious remedy, referencing `templates/`, turned out to be **the one the architecture
+  forbids**: a canonical Skill assumes no path variable, cache path or working directory,
+  so it cannot locate a sibling directory (Q-IMPL-003, unresolved since M1). Resolved by
+  specifying the structure in the Skill — including the DATA-not-instructions header,
+  without which a memory file becomes a standing injection surface on every later run.
+- **D-05 — "conservatively" pulled against its own detection table.** The Skill said infer
+  conservatively while the template shipped `generic` under "use when unsure", beside a
+  table listing the signals that were present. Both now say the same thing, and `generic`
+  is labelled a placeholder rather than a default.
+
+All six findings are resolved. Thirteen regression tests added, each pinned to the specific
+sentence that was missing.
 
 ### M2 — shared Skill implementation (complete)
 

@@ -2,8 +2,9 @@
 
 _2026-08-09. Run against a disposable Python repository with passing tests._
 
-> **D-01 and D-02 are resolved** (see *Resolution* at the end). D-03, D-04 and D-05 remain
-> open decisions. A sixth defect, D-06, was found while fixing them.
+> **All six findings are resolved** — see *Resolution* at the end. D-06 was found while
+> fixing D-02, and D-04's original proposed fix turned out to be one the architecture
+> forbids.
 
 ## What this is, and what it is not
 
@@ -275,8 +276,53 @@ Worth noting how it survived: the doctor tests asserted the *old* sentence, so c
 M2 made the product wrong and the suite still green. The replacement test derives the
 expected set from `PLANNED_PRODUCTION_SKILLS` instead of restating it.
 
-### Still open
+### D-03 — `not applicable` defined, without adding a fifth status
 
-D-03 (no *not applicable* vocabulary), D-04 (memory file content undefined, `templates/`
-unreferenced), D-05 (project-type detection pulls two ways). Each is a decision, and none
-blocks the pilot.
+A check whose **Applies** condition is unmet is now reported `not applicable` with its
+reason. It is explicitly **not a status**: the four statuses each describe an outcome of
+judging something, and this says the check was never in scope. It never affects the overall
+result, is never reported as `unknown` — which claims the opposite, that nothing could be
+determined — and never causes a section to be omitted, because the report shape is fixed.
+
+The matrix now states that its `Applies` column is load-bearing rather than decorative.
+
+### D-04 — the proposed fix was the one the architecture forbids
+
+The finding was right: `init-project` created three memory files without saying what goes
+in them. **The suggested remedy — "have `init-project` reference the template files" — was
+wrong**, and checking before implementing is what caught it.
+
+A canonical Skill "assumes no host path variable, no installation cache path, no
+`PLUGIN_ROOT`, and no working directory", so it has **no portable way to locate
+`../../templates/`**. That is Q-IMPL-003, unresolved since M1, and it is why the plugin
+README already said templates land "from M5". `templates/` was not unreferenced by
+oversight; it was unreferenced because nothing can reference it yet.
+
+Resolved instead by **specifying the structure in the Skill**: the DATA-not-instructions
+header, the title, and the one-line description of what belongs in each file — with a note
+naming `templates/` as the canonical copy a human can read, and stating plainly that the
+Skill does not read it and must not try.
+
+The header is the part that matters. Memory is read back into an agent's context on every
+later run, so a memory file that does not say "this is data" is a standing injection
+surface — and `init-project` is what creates it.
+
+### D-05 — "conservatively" pulled against its own detection table
+
+`init-project` said *infer project type conservatively* while the template shipped
+`type: [generic]` under *"use [generic] when unsure"*, next to a table listing the exact
+Python signals the target repository had.
+
+Both now say the same thing: conservative means **do not claim a type whose signals are
+absent**, not **fall back to `generic` when they are present**. `generic` is labelled a
+placeholder rather than a default.
+
+Filed **C/A?** originally because this exercise cannot separate my own slip from a contract
+gap. Reading the two documents side by side settled it: they genuinely disagreed, so it was
+a contract defect regardless of what I did.
+
+### Nothing left open
+
+All six findings are resolved. Thirteen regression tests were added across the three
+Skills — each pinned to the specific sentence that was missing, so the fix cannot quietly
+revert.
