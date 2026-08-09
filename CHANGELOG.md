@@ -5,6 +5,30 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — M4 slice 4: Codex host runbook and the Q-IMPL record
+
+`docs/m4-host-runbook.md` covers ATS-002, ATS-019, MET-003 parity and Gate A recognition.
+M4's build is complete; its exit criteria need the same host session as M2 and M3.
+
+- **Three of ATS-019's five scenarios are not testable as written, and the runbook says
+  so.** (b), (c) and (d) describe a Skill that *offers* template installation — presents
+  the file list, stops without approval, validates and copies with it. No such Skill
+  exists and none can be built: a canonical Skill cannot locate the template directory
+  while **Q-IMPL-003** is open. Same blocker that produced dry-run finding D-04.
+- The approval flow was **replaced**, not deferred, and the runbook maps FR-021's seven
+  rules onto the manual procedure one by one. Those three scenarios are recorded as *not
+  applicable — no offering Skill exists*, never as passed: a pass would claim a verified
+  approval flow where there is no flow. Same shape as ATS-005 in the M3 runbook.
+- **There is no free non-interactive step here**, unlike M3 — Claude's `plugin details`
+  gave a component inventory for nothing, and Codex has no read-only equivalent. Stated
+  rather than left as an unexplained gap.
+- **Q-IMPL-002/003/004 are recorded as open in three different ways.** 002 is open and
+  nothing depends on it — the canonical frontmatter minimum was chosen *because* the
+  answer was unknown, so answering it would permit a widening rather than fix anything.
+  004 is outside the MVP path. 003 has already decided three designs, each recorded where
+  it bites. A question the design does not rely on can stay open indefinitely without
+  cost; one it routes around bills you every time. 003 is the second kind.
+
 ### Added — M4 slice 3: Codex install guide and template reporting
 
 - **`docs/install-codex.md` is written**, with the same status table the Claude guide
