@@ -294,13 +294,43 @@ def test_agents_are_no_longer_forbidden_in_the_installable_root():
     )
 
 
-def test_the_drift_check_covers_agents():
-    """PRIN-01 is about where workflow prose lives, not about a directory name."""
-    source = (REPO_ROOT / "scripts" / "check_adapter_drift.py").read_text(encoding="utf-8")
-    assert '("adapters", "agents")' in source
+@pytest.mark.parametrize("relative", [
+    "agents/coordinator.md",
+    "adapters/claude/copied.md",
+    "adapters/codex/agent-templates/coordinator.toml",
+])
+def test_copied_skill_prose_is_caught_wherever_it_lands(tmp_path, capsys, relative):
+    """PRIN-01 is about where workflow prose lives, not about a directory name.
+
+    Checked by behaviour rather than by grepping the checker's source: the previous
+    version of this test asserted on a literal from the implementation and broke the
+    moment the implementation was refactored without changing what it does.
+    """
+    import check_adapter_drift
+
+    real_skill = (REPO_ROOT / "plugins/agent-harness/skills/plan-work/SKILL.md")
+    root = tmp_path / "plugin"
+    (root / "skills" / "plan-work").mkdir(parents=True)
+    (root / "skills" / "plan-work" / "SKILL.md").write_text(
+        real_skill.read_text(encoding="utf-8"), encoding="utf-8")
+
+    target = root / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(real_skill.read_text(encoding="utf-8"), encoding="utf-8")
+
+    assert check_adapter_drift.check(root) != 0
+    assert "ADAPTER_PROSE_DUPLICATED" in capsys.readouterr().err
 
 
-def test_the_adapter_ratio_is_enforced_now_that_skills_are_real():
+def test_the_adapter_ratio_is_enforced_now_that_skills_are_real(tmp_path, capsys):
     """It was a note while Skills were placeholders. M2 ended that."""
-    source = (REPO_ROOT / "scripts" / "check_adapter_drift.py").read_text(encoding="utf-8")
-    assert "ADAPTER_RATIO_EXCEEDED" in source
+    import check_adapter_drift
+
+    root = tmp_path / "plugin"
+    (root / "skills" / "s").mkdir(parents=True)
+    (root / "skills" / "s" / "SKILL.md").write_text("alpha " * 100, encoding="utf-8")
+    (root / "adapters").mkdir()
+    (root / "adapters" / "big.md").write_text("beta " * 100, encoding="utf-8")
+
+    assert check_adapter_drift.check(root) != 0
+    assert "ADAPTER_RATIO_EXCEEDED" in capsys.readouterr().err
