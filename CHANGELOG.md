@@ -7,6 +7,62 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### M2 — shared Skill implementation (in progress)
 
+#### Added — `refine-harness` (slice 6)
+
+- **`refine-harness`, the sixth production Skill.** Reads `plan.md`, `evidence.md` and
+  `result.md` from completed or failed runs and writes **exactly one** proposal at
+  `.agent-harness/proposals/<proposal-id>.md`. Instruction-only and dependency-free.
+- **Stage A only — it proposes, it never applies.** Nothing in memory, config, source or
+  the plugin changes. `status: proposed` on creation, never advanced. `apply-refinement`
+  owns application and does not exist yet.
+- **Evidence is required, not optional.** Every item needs at least one `evidence_refs[]`
+  entry resolving to real evidence in a declared source run. The repository defined
+  `run_id` and `E-###` separately but no combined form, so this slice documents
+  `<run-id>#<evidence-id>` and uses it identically in the Skill, the references and the
+  tests — **no schema change**. Assumptions, plan intent, result summaries and generic
+  best practice ground nothing.
+- **Duplicates and conflicts.** An exact normalized duplicate fact produces a proposal to
+  update the existing entry's `sources[]` and `last_confirmed` — never a second entity.
+  Near duplicates (Jaccard ≥ 0.8) and contradictions are marked `conflict: true` and left
+  for a human: resolving them automatically would delete the disagreement the reviewer
+  needs to see.
+- **Target paths are data, not permission.** Every `target_path` is normalized and
+  rejected on traversal, outside-absolutes, user-home scope or symlink escape, then
+  checked against the single permitted target for its `change_type`. Evidence text can
+  never inject a target.
+- **All source material is data.** Memory, evidence, results, READMEs and logs are read as
+  input, never followed as instructions — evidence output is written from whatever a run
+  executed, so it can carry adversarial text by construction.
+- **Redaction is fail-closed**: where a value cannot be established as safe the candidate
+  is omitted rather than stored. A proposal has the same leakage surface as run evidence.
+- `current_hash` is set only when a trustworthy hash is already available without running
+  a command, otherwise `null` — **never fabricated**, because a made-up hash would make
+  `apply-refinement`'s future staleness check pass against an unverified state.
+- `skill` items are always `risk: high` and **human-PR-only**; the Skill never writes to
+  `plugins/agent-harness/skills/**`.
+- **Known limitation recorded, not worked around:** the current M2 `.agent-harness/`
+  layout defines no project instruction file, so `change_type: workflow` has no legitimate
+  target. The Skill reports that rather than inventing a canonical path.
+- `references/proposal-contract.md`, `evidence-and-dedup.md`, `proposal-template.md`.
+- `tests/test_refine_harness_skill.py` — 35 test functions.
+
+#### Changed — safety profiles (slice 6)
+
+- New profile **`proposal-only-mutation`**, the fifth. The four existing ones are
+  semantically unchanged, and no existing Skill's mapping moved.
+- **`approval-gated-mutation` was deliberately not reused.** It requires mutation approval
+  tied to an already-shown proposal, and `refine-harness` is what produces the proposal —
+  reusing it would have made the authorization circular. The replacement distinction:
+  explicit invocation authorizes *creating* the artifact; creating it is never permission
+  to *apply* its contents.
+- `PROFILES_REQUIRING_PATH_ROOTS` now includes `proposal-only-mutation`, with
+  `ALLOWED_WRITE_PATH_ROOTS["refine-harness"] = [".agent-harness/proposals/"]` — narrower
+  than `init-project`'s root over the same tree, so two Skills hold different permissions
+  there on purpose.
+- Execution and agent-spawn grants are untouched: `PROFILES_PERMITTING_EXECUTION` stays
+  `["bounded-verification"]`, `PROFILES_PERMITTING_AGENT_SPAWN` stays
+  `["plan-bounded-orchestration"]`.
+
 #### Added — `orchestrate` (slice 5)
 
 - **`orchestrate`, the fifth production Skill**, and the one with the widest authority:

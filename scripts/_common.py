@@ -283,7 +283,8 @@ PLANNED_PRODUCTION_SKILLS = [
 # it says, so an unimplemented name in the installable root is a product surface with
 # nothing behind it.
 IMPLEMENTED_PRODUCTION_SKILLS = ["plan-work", "init-project", "verify-work",
-                                "doctor", "orchestrate"]     # M2 slices 1-5
+                                "doctor", "orchestrate",
+                                "refine-harness"]            # M2 slices 1-6
 
 # Still unimplemented, and therefore still rejected in the installable root.
 FORBIDDEN_PRODUCTION_SKILLS = [
@@ -301,7 +302,8 @@ ALLOWED_SKILLS = [DISCOVERY_FIXTURE_SKILL, *IMPLEMENTED_PRODUCTION_SKILLS]
 # init-project writes files, so it must start only because someone named it. plan-work
 # is read-only, so implicit selection costs a document, not a mutation.
 IMPLICIT_INVOCATION_MUST_BE_OFF = [DISCOVERY_FIXTURE_SKILL, "init-project",
-                                   "verify-work", "orchestrate"]
+                                   "verify-work", "orchestrate",
+                                   "refine-harness"]
 
 # --------------------------------------------------------------------------
 # Skill safety profiles
@@ -394,6 +396,37 @@ SKILL_SAFETY_PROFILES = {
     # direct implementation-command execution is deferred until that representation
     # exists. `executes_planned_commands_only` stays declared as the standing constraint
     # for when it does.
+    # Reads run evidence and writes exactly ONE proposal. It never applies that proposal.
+    #
+    # It deliberately does NOT reuse approval-gated-mutation. That profile requires
+    # mutation approval tied to an already-shown proposal -- and this Skill is what
+    # produces the proposal, so reusing it would make the authorization circular: the
+    # artifact would need to exist before it could be authorized to exist.
+    #
+    # The distinction that replaces it: explicit invocation authorizes CREATING the
+    # proposal artifact; creating a proposal is never permission to APPLY its contents.
+    # apply-refinement owns application approval, and does not exist yet.
+    "proposal-only-mutation": {
+        **UNIVERSAL_SKILL_POLICY,
+        "read_only": False,
+        "executes_commands": False,
+        "spawns_agents": False,
+        "modifies_source": False,
+        "modifies_config": False,
+        "requires_explicit_invocation": True,
+        "requires_mutation_approval": False,
+        "writes_single_proposal_only": True,
+        "modifies_existing_proposals": False,
+        "overwrites_existing_files": False,
+        "deletes_preexisting_content": False,
+        "may_rollback_current_attempt": True,
+        "requires_evidence_refs": True,
+        "initial_proposal_status": "proposed",
+        "requires_repository_contained_paths": True,
+        "rejects_symlink_escape": True,
+        "installs_packages": False,
+        "modifies_user_settings": False,
+    },
     "plan-bounded-orchestration": {
         **UNIVERSAL_SKILL_POLICY,
         "read_only": False,
@@ -426,6 +459,7 @@ SKILL_PROFILE = {
     # that, and widening it to fit would have defeated the point of having profiles.
     "doctor": "read-only",
     "orchestrate": "plan-bounded-orchestration",
+    "refine-harness": "proposal-only-mutation",
 }
 
 # Only this profile may run a subprocess. Asserted in tests so a future profile cannot
@@ -439,9 +473,14 @@ PROFILES_PERMITTING_AGENT_SPAWN = ["plan-bounded-orchestration"]
 
 # A mutation-capable Skill must also declare its entire write surface. Anything outside
 # these roots is a path the user never agreed to.
-PROFILES_REQUIRING_PATH_ROOTS = ["approval-gated-mutation"]
+PROFILES_REQUIRING_PATH_ROOTS = ["approval-gated-mutation", "proposal-only-mutation"]
 ALLOWED_WRITE_PATH_ROOTS = {
     "init-project": [".agent-harness/", "CLAUDE.md", "AGENTS.md"],
+    # One directory, and only ever one new file inside it. Note this is NARROWER than
+    # init-project's `.agent-harness/` root: two Skills now hold different permissions
+    # over the same tree, which is the point -- memory, config and run artifacts each
+    # keep their own approval path.
+    "refine-harness": [".agent-harness/proposals/"],
 }
 
 # Roots a Skill may never declare: user scope is out of bounds (SEC-17), and so is
