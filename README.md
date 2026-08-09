@@ -82,7 +82,8 @@ experimental.
 | M1.4B | Codex Skill discovery, ChatGPT Desktop, hooks, helper execution | **not started** |
 | **M2** | **shared Skill bodies — all seven implemented** | **done** |
 | **M3** | **Claude Code adapter — role subagents, adapter layer, manifest, host runbook** | **built** — exit criteria need a host session |
-| M4–M8 | Codex adapter, state, refinement, pilot, release | not started |
+| **M4** | **Codex adapter — role templates, adapter layer, install guide** | **in progress** — 3 of 4 slices |
+| M5–M8 | state, refinement, pilot, release | not started |
 
 **Exit criteria: 14 of 17 met.** The three unmet criteria all need host access that this
 phase deliberately did not take — see [`docs/m1-traceability.md`](docs/m1-traceability.md).
@@ -277,7 +278,9 @@ claude --plugin-dir ./plugins/agent-harness plugin details agent-harness@inline
 Codex CLI의 marketplace 등록만 격리 환경에서 확인했습니다. 자세한 절차는
 [`docs/install-claude-code.md`](docs/install-claude-code.md)를 보세요 — M3에서 작성됐고,
 어떤 단계가 실제로 실행됐고 어떤 단계가 문서상 근거뿐인지 맨 위 표에 구분해뒀습니다.
-[`docs/install-codex.md`](docs/install-codex.md)는 아직 초안이며 M4에서 작성됩니다.
+[`docs/install-codex.md`](docs/install-codex.md)도 M4에서 작성됐고, 같은 방식으로
+실행된 단계와 문서상 근거뿐인 단계를 구분해뒀습니다 — Codex 쪽은 Skill 탐색 자체가
+아직 미실행(E6)이라 구분해야 할 게 더 많습니다.
 
 **marketplace 등록은 플러그인 설치가 아닙니다.** 등록은 "이런 플러그인이 있다"를
 호스트에 알리는 것이고, 설치·활성화는 별개 단계입니다.
