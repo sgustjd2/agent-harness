@@ -1,7 +1,7 @@
 ---
 name: orchestrate
 description: >-
-  Execute an approved plan. Use when asked to execute this plan, implement the planned
+  Execute an existing ready plan. Use when asked to execute this plan, implement the planned
   work, coordinate these tasks, delegate independent tasks, run tasks in dependency
   order, continue this ready run, or perform the planned implementation. Works only from
   an existing ready plan, delegates within the plan's declared write scope, executes no
