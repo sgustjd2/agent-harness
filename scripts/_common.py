@@ -527,9 +527,89 @@ FORBIDDEN_WRITE_PATH_PREFIXES = [
     "~", "/", "\\", ".git/", ".github/", "plugins/", "marketplace/", "scripts/",
 ]
 
+# --------------------------------------------------------------------------
+# Claude Code role subagents (M3)
+# --------------------------------------------------------------------------
+# The six roles of PRD section 12, realized as Claude Code plugin subagents.
+#
+# These are HOST-SPECIFIC in a way Skills are not. `agents/*.md` is a Claude Code
+# component; Codex realizes the same six roles through role instructions carried in the
+# Skill bodies instead. That asymmetry is in the PRD, and this file must not paper over
+# it by pretending the two hosts enforce roles the same way.
+
+PLUGIN_AGENT_ROLES = ["coordinator", "researcher", "implementer",
+                      "reviewer", "tester", "refiner"]
+
+# Claude Code subagent frontmatter. `hooks`, `mcpServers` and `permissionMode` are
+# absent because plugin subagents do not support them -- the tools allowlist is the
+# only permission surface available here.
+AGENT_FRONTMATTER_REQUIRED = {"name", "description", "tools"}
+AGENT_FRONTMATTER_OPTIONAL = set()
+
+# Tool grants per role. An ALLOWLIST: a tool not named here is not available.
+#
+# `Edit` is absent for tester and refiner on purpose. Both write records -- evidence and
+# proposals -- and a record that can be edited after it is written is a record whose
+# result can be revised after somebody has seen it.
+ROLE_TOOLS = {
+    "coordinator": ["Read", "Glob", "Grep", "Write", "Edit", "Agent"],
+    "researcher": ["Read", "Glob", "Grep"],
+    "implementer": ["Read", "Glob", "Grep", "Write", "Edit", "Bash"],
+    "reviewer": ["Read", "Glob", "Grep"],
+    "tester": ["Read", "Glob", "Grep", "Write", "Bash"],
+    "refiner": ["Read", "Glob", "Grep", "Write"],
+}
+
+# Tools no role may hold, and why.
+#
+# The delegation tool is restricted rather than banned: coordinator's whole purpose is
+# distributing work. Everywhere else it is an escape hatch, because a role that can
+# delegate can hand its task to something with wider permissions than its own -- which
+# is exactly how a read-only guarantee ends one hop from where anyone is looking.
+ROLE_TOOL_DELEGATION = "Agent"
+ROLES_PERMITTED_DELEGATION = ["coordinator"]
+ROLE_TOOLS_FORBIDDEN_EVERYWHERE = ["WebFetch", "WebSearch"]
+
+# What the tools allowlist actually guarantees, per role -- and what it only asks for.
+#
+# This distinction is the answer to Q-IMPL-007, and it is a property of the mechanism
+# rather than of any host's behaviour: the frontmatter selects TOOLS. It has no syntax
+# for "these paths" or "these commands". So a restriction that names a path scope or a
+# command class cannot be expressed there, however clearly it is written in the body.
+#
+# An empty list therefore means every restriction the role declares is structural. That
+# holds for exactly the two read-only roles, which is what Q-IMPL-007 asked about.
+ROLE_INSTRUCTION_ONLY_LIMITS = {
+    "coordinator": ["writes are confined to run state under .agent-harness/"],
+    "researcher": [],
+    "implementer": ["writes are confined to the file scope given in the assignment",
+                    "shell use is confined to build and format commands"],
+    "reviewer": [],
+    "tester": ["shell use is confined to the gates defined in configuration",
+               "writes are confined to run evidence under .agent-harness/"],
+    "refiner": ["writes are confined to .agent-harness/proposals/"],
+}
+
+# Roles whose declared permissions are entirely tool-enforced. Derived, never hand-kept:
+# a role acquires a path- or command-scoped limit by having one written down, and this
+# list must follow that rather than record an intention about it.
+ROLES_FULLY_TOOL_ENFORCED = [name for name, limits
+                             in ROLE_INSTRUCTION_ONLY_LIMITS.items() if not limits]
+
+# Declared in each agent's policy marker. `mixed` is the honest label for a role whose
+# body states a limit the frontmatter cannot carry.
+AGENT_ENFORCEMENT_LEVELS = ["tool-allowlist", "mixed"]
+
+# Write tools. Holding one of these is what makes a role's path scope unenforceable.
+ROLE_WRITE_TOOLS = ["Write", "Edit"]
+ROLE_EXECUTION_TOOL = "Bash"
+
 # Structural policy marker embedded in a production SKILL.md body. Parsed as YAML, not
 # grepped: prose like "this Skill never runs commands" must not be mistaken for either
 # a promise or a violation, and only a declared block can be checked exactly.
+#
+# The same marker carries each role subagent's authority declaration, for the same
+# reason: an agent body legitimately contains the sentence "it never writes source".
 POLICY_MARKER_OPEN = "<!-- agent-harness:policy"
 POLICY_MARKER_CLOSE = "-->"
 
@@ -555,6 +635,14 @@ def skill_dirs(plugin_root: pathlib.Path = PLUGIN_ROOT):
     if not skills.is_dir():
         return []
     return sorted(p for p in skills.iterdir() if p.is_dir())
+
+
+def agent_files(plugin_root: pathlib.Path = PLUGIN_ROOT):
+    """Role subagent definitions in the installable root. Empty before M3."""
+    agents = plugin_root / "agents"
+    if not agents.is_dir():
+        return []
+    return sorted(p for p in agents.iterdir() if p.is_file() and p.suffix == ".md")
 
 
 def iter_text_files(root: pathlib.Path,

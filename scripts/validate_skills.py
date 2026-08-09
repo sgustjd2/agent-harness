@@ -52,10 +52,17 @@ from _common import (  # noqa: E402
 DESCRIPTION_MAX = 1536
 ALLOWED = SKILL_FRONTMATTER_REQUIRED | SKILL_FRONTMATTER_OPTIONAL
 
-# Component directories that must not appear in the installable plugin ROOT. Note this
-# is the root-level `agents/` (Claude subagents), not `skills/<name>/agents/`, which is
-# where a Skill's own invocation policy legitimately lives.
-FORBIDDEN_COMPONENTS = ["hooks", "agents", "workflows", "monitors", "scripts",
+# Component directories that must not appear in the installable plugin ROOT.
+#
+# `agents` left this list in M3, when the six role subagents were actually written. It
+# is not merely permitted now -- validate_agents.py checks every file in it, which is
+# the condition on which the ban was lifted. An empty or unchecked `agents/` would be
+# the surface the ban existed to prevent: a component the host discovers with nothing
+# behind it.
+#
+# `skills/<name>/agents/` is unrelated and always allowed. That is where a Skill's own
+# invocation policy lives.
+FORBIDDEN_COMPONENTS = ["hooks", "workflows", "monitors", "scripts",
                         ".mcp.json", ".app.json", ".lsp.json", "settings.json"]
 
 # Every implemented production Skill ships two references. The filenames differ per

@@ -37,6 +37,8 @@ VALIDATORS = [
      "three catalogs vs packaging schemas (jsonschema)"),
     ("validate_skills", "scripts/validate_skills.py",
      "Skill frontmatter (PyYAML) + installable-root boundary"),
+    ("validate_agents", "scripts/validate_agents.py",
+     "role subagent frontmatter, tool grants, and authority markers"),
     ("check_path_containment", "scripts/check_path_containment.py",
      "plugin-root containment, symlink escape"),
     ("check_path_portability", "scripts/check_path_portability.py",

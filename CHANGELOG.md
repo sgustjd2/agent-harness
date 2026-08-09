@@ -5,6 +5,43 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — M3 slice 1: the six Claude Code role subagents
+
+`plugins/agent-harness/agents/` now holds `coordinator`, `researcher`, `implementer`,
+`reviewer`, `tester` and `refiner`, validated by `scripts/validate_agents.py`.
+
+The directory was **rejected outright** until now, for the reason unimplemented Skill
+names were: a component the host discovers with nothing behind it is a product surface.
+The ban lifted because the files exist *and* are checked — being permitted was never the
+condition.
+
+- **Each role declares its authority in the same `agent-harness:policy` marker the
+  Skills use, and the validator compares that declaration against the tools actually
+  granted.** A body claiming `read_only` beside a frontmatter granting `Write` reads
+  perfectly well to a human, so a human is the wrong check for it.
+- **`Q-IMPL-007` is half answered, and the two halves are recorded separately.** The
+  allowlist selects *tools*; it has no syntax for a path scope or a command class. So
+  `researcher` and `reviewer` — whose every restriction is an absent tool — are fully
+  expressible, and the other four are not: their scope limits are prose, and each says
+  so in its own body. What remains open is whether the host *enforces* the allowlist,
+  which needs the write-attempt test and a host session. The PRD's fallback (demote to
+  an instruction-level constraint) is **not** taken — the constraint is tool-level as
+  designed; only its enforcement is unverified.
+- **`tester` and `refiner` hold `Write` without `Edit`.** Both write records, and a
+  record that can be edited after it is written is a result that can be revised after
+  somebody has seen it. `reviewer` holds no delegation tool, so its read-only guarantee
+  cannot end one hop away from where anyone is looking.
+- **The drift check now covers `agents/` too**, since PRIN-01 is about where workflow
+  prose lives rather than about a directory name. Its ratio guard, a note since M1
+  because placeholder Skills made the ratio meaningless, is **enforced** now that M2
+  wrote real bodies.
+
+Also fixed in passing: `check_adapter_drift.py` called `report.fail(path, message)`
+without a diagnostic code — the same latent crash found in `check_path_portability.py`
+during M2, dormant for the same reason, that no input had yet tripped the branch.
+
+Exit criteria ATS-001/003/004/005 are manual host tests and remain unmet.
+
 ### Fixed — contract dry-run findings D-01 through D-06
 
 Found by following the Skill instructions literally against a disposable repository

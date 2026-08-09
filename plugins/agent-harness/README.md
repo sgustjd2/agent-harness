@@ -18,6 +18,7 @@ skills/refine-harness/          production Skill (experimental), proposal-only
 skills/apply-refinement/        production Skill (experimental), approved application
 core/schemas/                   five packaging schemas
 core/schemas/state/             state schemas -- NOT packaging evidence
+agents/                         six Claude Code role subagents (M3)
 adapters/claude/                Claude integration
 adapters/codex/                 Codex integration + experiment records
 templates/                      files init-project will copy, from M5
@@ -73,13 +74,13 @@ repository.
 ## Constraints binding everything here
 
 - No file may reference a path outside this directory.
-- No *unimplemented* production Skill name (`apply-refinement`) may appear as a
-  directory here. The allowlist widens one
-  Skill at a time, as each is implemented.
+- Only a Skill on the allowlist may exist here. The list widened one Skill at a time
+  through M2 and is now complete, so what it rejects today is an unknown name rather
+  than an unimplemented one.
 - No `scripts/`, `assets/` or dependency manifest inside any Skill: Skills are
   instruction-only, so there is nothing to execute and nothing to install.
-- No `agents/`, `hooks/`, `workflows/`, `monitors/`, `scripts/`, `.mcp.json`,
-  `.app.json`, `.lsp.json` or `settings.json`.
+- No `hooks/`, `workflows/`, `monitors/`, `scripts/`, `.mcp.json`, `.app.json`,
+  `.lsp.json` or `settings.json`. `agents/` left this list in M3 — see *Role subagents*.
 - Canonical Skills assume no host path variable, no installation cache path, no
   `PLUGIN_ROOT`, and no working directory.
 - Skill frontmatter is `name` + `description` only.
@@ -285,3 +286,62 @@ universal with an override would have been worse: a guarantee with an exception 
 default wearing the wrong name. `network_access: false` remains genuinely universal, and
 a test asserts that exactly one profile may execute — so no future Skill acquires that
 power by inheriting it.
+
+## Role subagents — `agents/` (M3, Claude Code only)
+
+Six roles from the PRD, one file each: `coordinator`, `researcher`, `implementer`,
+`reviewer`, `tester`, `refiner`.
+
+This directory was **rejected outright** until M3, for the same reason unimplemented
+Skill names were: a component the host discovers with nothing behind it is a product
+surface. The ban lifted when the six files existed *and* `validate_agents.py` checked
+them — being permitted was never the condition.
+
+**These are host-specific, and deliberately so.** `agents/*.md` is a Claude Code
+component. Codex realizes the same six roles through role instructions carried in the
+Skill bodies, because its plugin package format does not define custom agents as a
+native component. The two hosts do not enforce roles the same way, and this repository
+does not describe them as if they did.
+
+### What the tools allowlist can and cannot do
+
+Each agent grants tools by name, and the grant is the enforcement. A tool that is not
+listed is not available — which is why `researcher` and `reviewer` hold no write tool
+and no shell, and why `reviewer` also holds no delegation tool: a reviewer that could
+delegate could hand the review to something with wider permissions than its own, and the
+read-only guarantee would end one hop from where anyone was looking.
+
+But the frontmatter selects **tools**. It has no syntax for *these paths* or *these
+commands*. So a role holding `Write` cannot have its write scope narrowed there, and a
+role holding `Bash` cannot have its command class narrowed there.
+
+| Role | Tools | Enforcement |
+| :--- | :--- | :--- |
+| `researcher` | Read, Glob, Grep | **tool-allowlist** — every limit is an absent tool |
+| `reviewer` | Read, Glob, Grep | **tool-allowlist** |
+| `coordinator` | + Write, Edit, Agent | mixed — "`.agent-harness/` only" is prose |
+| `implementer` | + Write, Edit, Bash | mixed — file scope and "build/format only" are prose |
+| `tester` | + Write, Bash | mixed — "configured gates only" is prose |
+| `refiner` | + Write | mixed — "proposals only" is prose |
+
+Each body declares which of its limits are prose, in the same
+`agent-harness:policy` marker the Skills use, and a validator compares that declaration
+against the tools actually granted. A body claiming `read_only` beside a frontmatter
+granting `Write` reads perfectly well to a human; it is rejected here.
+
+`tester` and `refiner` hold `Write` **without `Edit`**. Both write records — evidence and
+proposals — and a record that can be edited after it is written is a result that can be
+revised after somebody has seen it.
+
+### Q-IMPL-007, half answered
+
+The question is whether the `tools` allowlist alone enforces read-only for `researcher`
+and `reviewer`. It splits:
+
+- **Expressiveness — answered, no host needed.** For those two roles every restriction
+  *is* a tool that is absent, so there is nothing the allowlist fails to express. For
+  the other four there is, and the table above says which.
+- **Runtime enforcement — open.** Whether Claude Code actually refuses a tool outside
+  the list is a property of the host, not of this file, and it needs the write-attempt
+  test the PRD describes. Until then the read-only guarantee rests on documented
+  behaviour rather than on behaviour this repository has observed.
