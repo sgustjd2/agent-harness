@@ -523,8 +523,15 @@ ALLOWED_WRITE_PATH_ROOTS = {
 
 # Roots a Skill may never declare: user scope is out of bounds (SEC-17), and so is
 # anything that would let a Skill rewrite version control or its own packaging.
+#
+# `.codex/` and `.claude/` joined in M4 (SEC-18, THR-015). Host agent definitions change
+# the permissions and behaviour of every later session, so a Skill that could write one
+# could widen its own authority for the next run -- and the user would find out from a
+# diff, if they looked. The optional Codex templates are copied by hand for exactly this
+# reason; nothing in this product writes there.
 FORBIDDEN_WRITE_PATH_PREFIXES = [
     "~", "/", "\\", ".git/", ".github/", "plugins/", "marketplace/", "scripts/",
+    ".codex/", ".claude/",
 ]
 
 # --------------------------------------------------------------------------

@@ -5,6 +5,43 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — M4 slice 1: the optional Codex agent templates
+
+Six TOML templates at `adapters/codex/agent-templates/`, one per role, plus
+`scripts/validate_agent_templates.py`.
+
+**These are the only files in the repository designed to be copied out of it**, into a
+user's `.codex/agents/`. A defect in one lands in somebody else's project and changes the
+permissions of every Codex session they run afterwards (THR-015), so they are validated
+at build time rather than only by a pre-copy procedure — a malicious fork now has to
+defeat a check that lives in the repository.
+
+- **Nothing installs them, and nothing can.** `.codex/` and `.claude/` joined the
+  forbidden write-prefix list, so no Skill may even declare the path. A Skill able to
+  write a host agent definition could widen its own authority for the next session. The
+  copy is a documented manual step — which also sidesteps Q-IMPL-003 entirely, since a
+  human copying a file needs no path variable.
+- **Sandbox modes are declared only where the PRD fixes one** — `read-only` for
+  researcher and reviewer, `workspace-write` for tester. The other three declare none:
+  inventing a value would make a session default look like a reviewed constraint, and a
+  reviewer counts it. `danger-full-access` is rejected outright.
+- **The two hosts must offer the same six roles**, asserted directly. A role present on
+  one host only is the parity defect MET-003 measures.
+- The Codex template's sandbox mode is **not** equivalent to Claude's tools allowlist,
+  and a test keeps that visible. Claude withholds tools; Codex's plugin format defines no
+  equivalent, so the sandbox is the nearest available and it is coarser.
+
+**NFR-004 accounting changed, deliberately.** Counting the templates as adapter prose put
+the ratio at 22%, over the 20% limit — but the same six role definitions sit outside
+`adapters/` on the Claude side and never counted. Enforcing that would have meant
+shrinking the Codex role instructions to fit a limit Claude's identical content does not
+touch, on the host with *weaker* enforcement. Role definitions are now counted and
+reported as their own bucket; the NFR-004 ratio stays on actual adapter documentation,
+now 15%.
+
+Also replaced two source-grepping drift tests with behavioural ones. They asserted on
+literals from the implementation and broke on a refactor that changed nothing it does.
+
 ### Added — M3 slice 4: host runbook and the Q-IMPL-007 probe
 
 M3's four exit criteria (ATS-001, ATS-003, ATS-004, ATS-005) are manual host tests. This

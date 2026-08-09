@@ -39,6 +39,8 @@ VALIDATORS = [
      "Skill frontmatter (PyYAML) + installable-root boundary"),
     ("validate_agents", "scripts/validate_agents.py",
      "role subagent frontmatter, tool grants, and authority markers"),
+    ("validate_agent_templates", "scripts/validate_agent_templates.py",
+     "optional Codex agent TOML templates (tomllib) -- the only files meant to leave"),
     ("check_path_containment", "scripts/check_path_containment.py",
      "plugin-root containment, symlink escape"),
     ("check_path_portability", "scripts/check_path_portability.py",
