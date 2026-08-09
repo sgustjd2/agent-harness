@@ -5,6 +5,32 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — M3 slice 2: the Claude Code adapter layer
+
+`adapters/claude/` was three placeholder files saying they would be written in M3. They
+are written.
+
+- **`capability-notes.md` labels every claim `Observed`, `Documented` or `Open`.**
+  Documented capability and observed behaviour are different things, and a note that
+  blurs them gets cited later as though a test had been run — the error M1.3.1 was spent
+  correcting. Records what the host actually did on 2.1.195, and says a single version is
+  not a cross-version contract.
+- **The component inventory is now a post-install check with a number attached.** M1.4A
+  read `Agents 0`; M3 makes it 6, and a lower number means the roles did not load —
+  visible without invoking a model. The expected count is derived from the role list, so
+  a seventh role fails the test until the note is updated.
+- **`claude-md-block.md` holds the block, not the rules about it.** `init-project` owns
+  placement, replacement and conflict reporting; this is the text that goes inside. Two
+  files stating the same rules would be the drift the check exists to catch. 1090 bytes
+  against the 2 KiB ceiling.
+- **Nothing in the directory is read at runtime, and all three files say so.** A Skill
+  cannot locate a sibling directory while Q-IMPL-003 is open. This is the trap that
+  dry-run finding D-04 proposed walking into, and a test now fails if any Skill
+  references the adapter path.
+
+Adapter volume moved from 10% to 13% against the 20% NFR-004 limit, now enforced. The
+Codex adapter is written in M4 and shares that budget.
+
 ### Added — M3 slice 1: the six Claude Code role subagents
 
 `plugins/agent-harness/agents/` now holds `coordinator`, `researcher`, `implementer`,
