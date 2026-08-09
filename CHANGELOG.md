@@ -10,15 +10,32 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 #### Added — `orchestrate` (slice 5)
 
 - **`orchestrate`, the fifth production Skill**, and the one with the widest authority:
-  it writes source, runs commands, and may delegate to subagents. Instruction-only and
-  dependency-free.
+  it writes source and may delegate to subagents. It executes **no** commands in this
+  milestone. Instruction-only and dependency-free.
 - **The plan is the authority.** Requires a specific run id or an unambiguously latest
   **ready** run. No ready plan means `Blocked` recommending `plan-work` — never a
   synthesized plan. Ambiguous ready runs prompt a choice rather than a silent pick. A
   cyclic or malformed plan is rejected, never repaired.
-- **Three `..._only` constraints** make that authority acceptable: planned commands only
-  (never inferred from `package.json`, a Makefile or CI files), planned paths only, and
-  the dependency graph respected.
+- **Bounding constraints** make that write authority acceptable: planned paths only,
+  **repository-contained** (SEC-05 / SEC-06 / THR-003 — a path listed in `writes[]` is not
+  permission to leave the repository; traversal, outside-absolutes and symlink escapes are
+  rejected, and overlap and scope comparisons use the normalized form), the dependency
+  graph respected, and **`.agent-harness/**` read-only**. An unsafe planned path blocks the
+  task rather than being repaired.
+- **No command execution in this milestone.** `plan.schema.json` has no structured task
+  command field, so there is no argv, working directory, timeout, or security semantics to
+  validate — and executing prose that merely looks like a command is the injection surface
+  `verify-work`'s argv contract exists to prevent. A task that needs a command is
+  `blocked` with the missing capability stated. `verify-work` remains the only production
+  Skill permitted to execute configured commands, and is not weakened.
+- **Harness state is protected.** `orchestrate` reads `config.yaml` and
+  `runs/<run-id>/plan.md` but writes no `.agent-harness` path, and does not touch the
+  managed marker block in `CLAUDE.md` / `AGENTS.md`. Config changes belong to direct
+  editing or `apply-refinement`, memory to the proposal → approval path, and evidence and
+  result files to the deferred run-state runtime.
+- **Authorization model:** a ready plan defines the allowed **scope**; explicit invocation
+  authorizes ordinary non-destructive work **within** it. The PRD defines no separate
+  plan-approval gate, and this slice claims none.
 - Frontier from topological order; a failed dependency `skipped`s its dependents while
   unrelated branches continue. Parallelism requires dependency independence, disjoint
   `writes[]`, **and** a host that exposes it — otherwise sequential, and degradation is
@@ -47,11 +64,13 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - New profile **`plan-bounded-orchestration`**, the fourth. The three existing profiles
   are semantically unchanged.
-- **Execution and delegation are now granted separately**, each as an explicit list.
-  `PROFILES_PERMITTING_EXECUTION` holds `bounded-verification` and
-  `plan-bounded-orchestration`; the new `PROFILES_PERMITTING_AGENT_SPAWN` holds only
+- **Execution and delegation are now granted separately**, each as an explicit list, and
+  they land on **different** profiles. `PROFILES_PERMITTING_EXECUTION` holds only
+  `bounded-verification`; the new `PROFILES_PERMITTING_AGENT_SPAWN` holds only
   `plan-bounded-orchestration`. `verify-work` runs commands but must never delegate — a
-  verifier that could delegate could delegate its way around its own gate list.
+  verifier that could delegate could delegate its way around its own gate list — and
+  `orchestrate` delegates but must not execute until a validated command representation
+  exists.
 - `executes_commands` stays out of `UNIVERSAL_SKILL_POLICY`, and a test asserts no
   profile executes without appearing on the grant list.
 - **Deferred, and recorded as such:** the run-state runtime. This slice writes no

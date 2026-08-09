@@ -13,7 +13,7 @@ skills/plan-work/               production Skill (experimental), read-only
 skills/init-project/            production Skill (experimental), approval-gated
 skills/verify-work/             production Skill (experimental), bounded execution
 skills/doctor/                  production Skill (experimental), read-only diagnostics
-skills/orchestrate/             production Skill (experimental), plan-bounded execution
+skills/orchestrate/             production Skill (experimental), plan-bounded delegation
 core/schemas/                   five packaging schemas
 core/schemas/state/             state schemas -- NOT packaging evidence
 adapters/claude/                Claude integration
@@ -33,7 +33,7 @@ workflow layer, two thin adapters.
 | `init-project` | production | **experimental**, approval-gated mutation |
 | `verify-work` | production | **experimental**, bounded command execution |
 | `doctor` | production | **experimental**, read-only harness diagnostics |
-| `orchestrate` | production | **experimental**, plan-bounded orchestration |
+| `orchestrate` | production | **experimental**, plan-bounded orchestration (no command execution) |
 
 **No other production Skill is implemented.** `refine-harness` and
 `apply-refinement` are planned, and
@@ -171,11 +171,19 @@ safely run at once, and reports what actually happened.
 requires a **ready** plan: no plan means `Blocked` recommending `plan-work`, never a
 synthesized one, and a cyclic graph is rejected rather than repaired.
 
-Three constraints make the widest authority in the product acceptable: **planned commands
-only**, **planned paths only**, **dependency graph respected**. A `changed_files` entry
-outside a task's `writes[]` is a scope violation, and the plan is never widened afterwards
-to justify it. Two results touching the same file are held and reported — **never
-auto-merged**.
+The constraints that make the widest *write* authority acceptable: **planned paths
+only**, **repository-contained** (a path listed in `writes[]` is not permission to leave
+the repository — traversal, outside-absolutes and symlink escapes are rejected, and every
+comparison uses the normalized form), **dependency graph respected**, and
+**`.agent-harness/**` read-only**. A `changed_files` entry outside a task's `writes[]` is
+a scope violation, and the plan is never widened afterwards to justify it. Two results
+touching the same file are held and reported — **never auto-merged**.
+
+**It executes no commands in this milestone.** There is no structured, validated command
+representation for a plan task yet, and running text that merely looks like a command is
+the injection surface `verify-work`'s argv contract exists to prevent. A task that needs a
+command is `blocked`; `verify-work` remains the only production Skill permitted to execute
+configured commands.
 
 Explicit invocation authorises ordinary planned work; asking again per task would make the
 gate a formality. Destructive and irreversible actions — force push, tree deletion,
@@ -194,10 +202,12 @@ profiles**: `plan-work` and `doctor` are `read-only`, `init-project` is
 `plan-bounded-orchestration`. One flattened table would let a Skill that writes files
 claim it does not.
 
-Execution and delegation are granted **separately**, both as explicit lists. Two profiles
-may run commands (`bounded-verification`, `plan-bounded-orchestration`); only one may
-spawn agents (`plan-bounded-orchestration`). `verify-work` deliberately cannot delegate —
-a verifier that could would be able to delegate its way around its own gate list.
+Execution and delegation are granted **separately**, both as explicit lists. Exactly one
+profile may run commands (`bounded-verification`) and exactly one may spawn agents
+(`plan-bounded-orchestration`) — and they are different profiles. `verify-work` cannot
+delegate, because a verifier that could would be able to delegate its way around its own
+gate list; `orchestrate` cannot execute, because no validated command representation
+exists for it to execute safely.
 
 `doctor` reusing `read-only` unchanged is the point of having profiles: a diagnostic that
 needed the profile widened to fit would not have been a diagnostic.

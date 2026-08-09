@@ -3,6 +3,22 @@
 Three different collisions, detected at three different moments, with three different
 answers. None of them is an automatic merge.
 
+## Before anything — is the planned path even safe?
+
+Ahead of every comparison below, each `reads[]` and `writes[]` entry is interpreted
+relative to the repository root and **normalized**, and is rejected if it escapes the
+repository by traversal, by being absolute, or through symlink resolution.
+**Being listed in `writes[]` is not permission to leave the repository.**
+
+An unsafe planned path means the task is **`blocked`** and not delegated; the path is
+reported and the plan is never rewritten to make it pass.
+
+Every check that follows uses the normalized, contained form — raw strings would let two
+spellings of the same path miss each other.
+
+`.agent-harness/**` is **read-only** to `orchestrate`: a task planning to write there is
+`blocked`, because config, memory, and run artifacts each have their own approval path.
+
 ## Before delegation — overlapping planned writes
 
 Intersect the `writes[]` sets of the tasks selected for this round. **Any overlap means

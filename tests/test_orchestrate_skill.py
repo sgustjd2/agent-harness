@@ -1,9 +1,10 @@
 """Contract tests for the orchestrate Skill (M2 slice 5).
 
-orchestrate has the widest authority in the product — it writes source, runs commands, and
-delegates. These tests concentrate on the boundaries that make that acceptable: the plan
-is the authority, scope is enforced in both directions, conflicts are never auto-merged,
-and completion is not something this Skill may declare.
+orchestrate has the widest WRITE authority in the product -- it writes source and may
+delegate -- while executing no commands in this milestone. These tests concentrate on the
+boundaries: planned paths only and repository-contained, harness state read-only, scope
+enforced in both directions, conflicts never auto-merged, and completion not something
+this Skill may declare.
 
 Nothing here spawns an agent or runs an orchestration command. The portable contract is
 validated statically.
@@ -88,7 +89,7 @@ def test_plan_bounded_orchestration_profile_is_selected():
 
 
 @pytest.mark.parametrize("key,expected", [
-    ("executes_commands", True),                   # 5
+    ("executes_commands", False),                  # deferred (hardening)
     ("spawns_agents", True),                       # 6
     ("modifies_source", True),                     # 7
     ("requires_ready_plan", True),                 # 8
@@ -98,6 +99,9 @@ def test_plan_bounded_orchestration_profile_is_selected():
     ("respects_dependency_graph", True),           # 12
     ("max_parallel_from_config", True),            # 13
     ("auto_merge_conflicts", False),               # 21
+    ("requires_repository_contained_paths", True),
+    ("rejects_symlink_escape", True),
+    ("modifies_harness_state", False),
     ("requires_explicit_invocation", True),
     ("network_access", False),
     ("modifies_user_settings", False),
@@ -116,6 +120,10 @@ def test_declared_contract(key, expected):
     ("auto_merge_conflicts", True),
     ("requires_ready_plan", False),
     ("network_access", True),
+    ("executes_commands", True),                    # must stay deferred
+    ("requires_repository_contained_paths", False),
+    ("rejects_symlink_escape", False),
+    ("modifies_harness_state", True),
 ])
 def test_flipping_a_boundary_fails_validation(plugin_tree, key, bad):
     """Each limit on the widest profile is enforced, not merely written down."""
@@ -137,10 +145,12 @@ def test_execution_and_spawning_are_separately_gated():
     from _common import (PROFILES_PERMITTING_AGENT_SPAWN, PROFILES_PERMITTING_EXECUTION,
                          SKILL_SAFETY_PROFILES, UNIVERSAL_SKILL_POLICY)
 
-    assert PROFILES_PERMITTING_EXECUTION == ["bounded-verification",
-                                             "plan-bounded-orchestration"]
+    # orchestrate does NOT execute in this milestone; verify-work is the only one that may.
+    assert PROFILES_PERMITTING_EXECUTION == ["bounded-verification"]
+    assert "plan-bounded-orchestration" not in PROFILES_PERMITTING_EXECUTION
     assert PROFILES_PERMITTING_AGENT_SPAWN == ["plan-bounded-orchestration"]
     assert SKILL_SAFETY_PROFILES["bounded-verification"]["spawns_agents"] is False
+    assert SKILL_SAFETY_PROFILES["bounded-verification"]["executes_commands"] is True
     # executes_commands must not creep back into the universal set.
     assert "executes_commands" not in UNIVERSAL_SKILL_POLICY
     assert UNIVERSAL_SKILL_POLICY["network_access"] is False
@@ -181,13 +191,93 @@ def test_required_plan_task_fields_are_named(field):
 
 
 @pytest.mark.parametrize("rule", [
-    "run only commands the plan names",
-    "never infer them from `package.json`",
-    "is not a substitute for `verify-work`",
+    "**`orchestrate` executes no commands in this milestone.**",
+    "**do not extract command-looking prose from `plan.md` and run it.**",
+    "**do not execute verification gates.** `verify-work` remains the only production",
+    "never infer a command from `package.json`",
 ])
-def test_planned_commands_only(rule):
-    """9/25."""
+def test_orchestrate_executes_no_commands(rule):
+    """Command execution is deferred until a validated representation exists."""
     assert rule in _flat(SKILL_MD), f"SKILL.md omits: {rule!r}"
+
+
+def test_command_dependent_task_becomes_blocked():
+    """A task needing a command is blocked; unrelated work continues."""
+    body = _flat(SKILL_MD)
+    assert "mark it **`blocked`**, state" in body
+    assert "continue unrelated tasks that can safely proceed" in body
+
+
+def test_command_execution_is_deferred_not_abandoned():
+    """The reason is a missing representation, stated so it can be lifted later."""
+    body = _flat(SKILL_MD)
+    assert "no structured, validated command representation" in body
+    assert "no argv\narray, no working directory, no timeout".replace("\n", " ") in body
+
+
+def test_verify_work_execution_is_not_weakened():
+    """verify-work keeps its execution grant intact."""
+    from _common import SKILL_PROFILE, SKILL_SAFETY_PROFILES, extract_policy_marker
+
+    assert SKILL_PROFILE["verify-work"] == "bounded-verification"
+    vw = SKILL_SAFETY_PROFILES["bounded-verification"]
+    assert vw["executes_commands"] is True
+    assert vw["executes_configured_gates_only"] is True
+    declared = yaml.safe_load(extract_policy_marker(
+        (SKILLS / "verify-work" / "SKILL.md").read_text(encoding="utf-8")))
+    assert declared["executes_commands"] is True
+
+
+# ------------------------------------------- repository containment (SEC-05/06)
+
+@pytest.mark.parametrize("rule", [
+    "**being listed in `writes[]` is not permission to leave the repository.**",
+    "interpret it relative to the **repository root**",
+    "**normalize** it before any comparison",
+    "reject **path traversal** that escapes the repository",
+    "reject **absolute paths** outside the repository",
+    "reject a path whose **symlink resolution** escapes the repository",
+])
+def test_planned_paths_must_be_repository_contained(rule):
+    """Traversal escape, absolute-outside, and symlink escape each rejected."""
+    assert rule in _flat(SKILL_MD), f"SKILL.md omits: {rule!r}"
+
+
+def test_comparisons_use_normalized_contained_paths():
+    """Raw-string comparison would let two spellings of one path miss each other."""
+    body = _flat(SKILL_MD)
+    assert "**normalized, repository-contained** form" in body
+    assert "disagree about whether they collide" in body
+
+
+def test_unsafe_planned_path_blocks_without_repairing_the_plan():
+    body = _flat(SKILL_MD)
+    assert "**do not delegate that task**, disposition **`blocked`**" in body
+    assert "**never repair or rewrite the plan**" in body
+
+
+# ------------------------------------------------- harness-state protection
+
+def test_agent_harness_state_is_read_only():
+    """config.yaml and plan.md may be read; no .agent-harness path may be written."""
+    body = _flat(SKILL_MD)
+    assert "**harness state is read-only here.**" in body
+    assert "may write **no** `.agent-harness` path at all" in body
+    assert "a task whose `writes[]` targets `.agent-harness/**` is **blocked**" in body
+
+
+@pytest.mark.parametrize("owner", [
+    "apply-refinement", "proposal", "deferred run-state",
+])
+def test_harness_state_owners_are_named(owner):
+    """Each protected path has an owner; writing here would route around all three."""
+    assert owner in _flat(SKILL_MD)
+
+
+def test_managed_marker_block_is_not_modified_by_orchestrate():
+    body = _flat(SKILL_MD)
+    assert "do not modify the managed marker block" in body
+    assert "belongs to `init-project`" in body
 
 
 @pytest.mark.parametrize("action", [
@@ -204,8 +294,19 @@ def test_destructive_actions_require_approval(action):
 def test_ordinary_planned_work_needs_no_second_approval():
     """11. Re-approving every task would make the gate a formality."""
     body = _flat(SKILL_MD)
-    assert "for ordinary planned work, explicit invocation is sufficient" in body
+    assert "explicit invocation is sufficient" in body
     assert "turns a safety gate into a rubber stamp nobody reads" in body
+
+
+def test_authorization_is_ready_plan_plus_explicit_invocation():
+    """The PRD defines no separate plan-approval gate, so do not claim one."""
+    body = _flat(SKILL_MD)
+    assert "**a ready plan defines the allowed scope; explicit invocation authorizes " \
+           "the work.**" in body
+    assert "work outside the plan is unauthorized however the skill was" in body
+    # The withdrawn claim must not survive anywhere in the Skill or its references.
+    for path in (SKILL_MD, CONTRACT, CONFLICT, HANDOFF):
+        assert "a human approved that plan" not in _flat(path), f"{path.name} still claims it"
 
 
 # ------------------------------------------- 12-17. frontier, parallelism, degradation
