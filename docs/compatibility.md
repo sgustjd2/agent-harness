@@ -236,6 +236,30 @@ elevation. The check itself is platform-neutral and runs on CI.
 | Q-IMPL-002 | Does Codex ignore or reject unknown `SKILL.md` frontmatter keys? | no — the minimum set is safe either way |
 | Q-IMPL-003 (Skill half) | How does a canonical Skill locate bundled scripts? | no — helper execution deferred until answered |
 | Q-IMPL-004 | Codex private-repository authentication | no |
+
+### Q-IMPL-002/003/004 after M4
+
+M4's exit criterion asks for **documented answers**, not resolved questions. All three
+are still open, and each is open in a different way.
+
+**Q-IMPL-002 — open, and nothing depends on it.** The canonical frontmatter is `name` +
+`description` only: the documented intersection of both hosts. That set was chosen
+*because* the answer was unknown, so the design is correct under either behaviour.
+Answering it would permit a host-specific key in the canonical layer — a widening, not a
+fix. It stays open rather than urgent, which is a different thing from being ignored.
+
+**Q-IMPL-003 — open, and designed around three times.** It has already decided that
+helper execution is deferred, that `init-project` specifies memory structure inline rather
+than reading `templates/` (dry-run D-04), and that the Codex agent templates are copied by
+hand rather than by a Skill (`m4-host-runbook.md`, RB-M4-03). Each consequence is recorded
+where it bites, not collected in one place nobody reads. Settled by ATS-020, on both hosts.
+
+**Q-IMPL-004 — open, and outside the MVP path.** It matters only for private-repository
+installation, which nothing depends on.
+
+The pattern is worth naming: **a question the design does not rely on can stay open
+indefinitely without cost, and one the design routes around costs something every time it
+does.** Q-IMPL-003 is the second kind, and it is the one to spend a host session on.
 | Q-IMPL-007 | Does the subagent `tools` allowlist enforce read-only for researcher/reviewer? | no — **half answered in M3**, see below |
 | Q-IMPL-009 | Is there an official Codex validator? | no — local schemas documented in §2 |
 | Q-IMPL-010 | Approval interaction model and non-replayable representation | no for M2, **yes before M6** |
