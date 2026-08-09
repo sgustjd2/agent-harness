@@ -379,24 +379,34 @@ SKILL_SAFETY_PROFILES = {
         "verification_default": "Not Run",
         "evidence_persistence": "response-only",
     },
-    # Executes an already-approved plan: runs planned commands, writes planned paths,
-    # and may delegate to subagents.
+    # Carries out a ready plan: writes planned source paths and may delegate to
+    # subagents. It does NOT execute commands in this milestone.
     #
-    # This is the widest profile in the product, and every field below is the boundary
-    # that makes it acceptable. The authority does not come from the Skill -- it comes
-    # from a plan a human already approved, which is why `requires_ready_plan` sits
-    # beside the three "..._only" constraints rather than in place of them. Being allowed
-    # to act is not the same as being allowed to decide what to do.
+    # A ready plan defines the allowed SCOPE; explicit invocation is the user's
+    # authorization to begin ordinary non-destructive work within that scope. Those are
+    # two different things, and neither is a general licence: work outside the plan is
+    # unauthorized however the Skill was invoked.
+    #
+    # `executes_commands` is False because there is no structured, validated command
+    # representation for plan tasks yet -- no argv, no working directory, no timeout, no
+    # security semantics. Executing prose that merely looks like a command would be
+    # exactly the injection surface verify-work's argv contract exists to prevent, so
+    # direct implementation-command execution is deferred until that representation
+    # exists. `executes_planned_commands_only` stays declared as the standing constraint
+    # for when it does.
     "plan-bounded-orchestration": {
         **UNIVERSAL_SKILL_POLICY,
         "read_only": False,
-        "executes_commands": True,
+        "executes_commands": False,
         "spawns_agents": True,
         "modifies_source": True,
         "requires_explicit_invocation": True,
         "requires_ready_plan": True,
         "executes_planned_commands_only": True,
         "modifies_planned_paths_only": True,
+        "requires_repository_contained_paths": True,
+        "rejects_symlink_escape": True,
+        "modifies_harness_state": False,
         "destructive_actions_require_approval": True,
         "respects_dependency_graph": True,
         "max_parallel_from_config": True,
@@ -420,7 +430,7 @@ SKILL_PROFILE = {
 
 # Only this profile may run a subprocess. Asserted in tests so a future profile cannot
 # acquire execution by inheritance without someone deciding to grant it.
-PROFILES_PERMITTING_EXECUTION = ["bounded-verification", "plan-bounded-orchestration"]
+PROFILES_PERMITTING_EXECUTION = ["bounded-verification"]
 
 # Delegating to subagents is narrower still than executing. verify-work runs commands but
 # must never spawn an agent: a verifier that could delegate could delegate its way around

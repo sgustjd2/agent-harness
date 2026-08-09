@@ -45,8 +45,10 @@ nothing.
 **`orchestrate` is the fifth production Skill.** It **consumes a ready plan** and
 carries it out: walking the dependency graph, delegating independent tasks in parallel
 when the host and the plan's write scopes allow it and running sequentially otherwise.
-**It delegates only within the plan's boundaries** -- planned commands, planned paths --
-and **real source changes may occur**. It never declares the work complete; `verify-work`
+**It delegates only within the plan's boundaries** -- planned paths, repository-contained,
+with `.agent-harness/**` read-only -- and **real source changes may occur**. It **executes
+no commands** in this milestone; `verify-work` remains the only Skill that runs configured
+commands. It never declares the work complete; `verify-work`
 owns that. **Automatic run-state persistence remains deferred**: no `evidence.md` or
 `result.md` is written in this milestone.
 
@@ -92,7 +94,7 @@ plugins/agent-harness/                the installable plugin. Self-contained.
   skills/init-project/                  production Skill, approval-gated
   skills/verify-work/                   production Skill, bounded execution
   skills/doctor/                        production Skill, read-only diagnostics
-  skills/orchestrate/                   production Skill, plan-bounded execution
+  skills/orchestrate/                   production Skill, plan-bounded delegation
   core/schemas/                         five packaging schemas
   core/schemas/state/                   state schemas -- NOT packaging evidence
   adapters/{claude,codex}/              host integration + experiment records
