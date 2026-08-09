@@ -5,6 +5,35 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed — contract dry-run findings D-01, D-02, D-06
+
+Found by following the Skill instructions literally against a disposable repository
+(`docs/m2-contract-dryrun.md`). None of the three was reachable by the existing suite,
+because every test validates a Skill **in isolation**.
+
+- **D-01 — the pipeline did not connect.** `refine-harness` requires `evidence.md` and
+  `result.md`; no M2 Skill writes them, so it and `apply-refinement` were unreachable.
+  Resolved by **stating the prerequisite**, not by reversing the run-state deferral or
+  weakening the evidence contract — both of which were considered and rejected. The Skill
+  now names the missing producer, says *no proposal* is the correct output, and forbids
+  each workaround by name. A test pins the fact it rests on.
+- **D-02 — the proposed Python gate reported a false failure.** `["python", "-m",
+  "pytest", "-q"]` resolved on Windows to a stub that ran nothing and exited non-zero:
+  `verify-work` said `fail` on passing tests (correct per §15.4 — the process ran) while
+  `doctor` said the executable was `ok`. `init-project` now proposes the interpreter that
+  owns the project, the template no longer ships the bare name, and `doctor` EXE-01 warns
+  on a bare interpreter name. **Diverges from PRD §15.2**, whose table is explicitly a set
+  of candidates `init-project` proposes; recorded in the dry-run document.
+- **D-06 — `doctor` expected three Skills to be missing.** It still described
+  `orchestrate`, `refine-harness` and `apply-refinement` as unimplemented, so a complete
+  installation was diagnosed against a stale expectation. PKG-04 now expects all seven;
+  PKG-06 was repurposed to catch an unrecognised Skill directory. The replacement test
+  derives the set from `PLANNED_PRODUCTION_SKILLS` rather than restating it — the old one
+  asserted the stale sentence, which is how completing M2 made the product wrong while the
+  suite stayed green.
+
+D-03, D-04 and D-05 remain open decisions; none blocks the pilot.
+
 ### M2 — shared Skill implementation (complete)
 
 #### Added — `apply-refinement` (slice 7, final)

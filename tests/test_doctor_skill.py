@@ -248,11 +248,22 @@ def test_optional_checks_never_fail(check, expectation):
     assert expectation in matrix, f"{check} expectation missing"
 
 
-def test_unimplemented_skills_absent_is_not_a_failure():
-    """19. The four-Skill milestone is the contract, not the seven-Skill plan."""
+def test_doctor_expects_all_seven_production_skills():
+    """19. Was "unimplemented Skills may be absent" until every planned Skill shipped.
+
+    The old assertion outlived its subject: doctor still told readers that three Skills
+    were expected to be missing, which would have had it report a healthy installation as
+    incomplete-by-design. Found by the M2 contract dry-run.
+    """
+    from _common import PLANNED_PRODUCTION_SKILLS
+
     body = _flat(SKILL_MD)
-    assert "their absence is expected and is **never** a `fail`" in body
-    assert "| pkg-06 | unimplemented skills | always |" in _flat(MATRIX)
+    assert "**all seven** production skills are present" in body
+    for name in PLANNED_PRODUCTION_SKILLS:
+        assert f"`{name}`" in body, f"doctor omits {name!r} from the expected set"
+    assert "any one of them missing is a `fail`" in body
+    # PKG-06 now guards the other direction: an unrecognised Skill directory.
+    assert "| pkg-06 | no unexpected skill directory | always |" in _flat(MATRIX)
 
 
 def test_commit_evidence_true_is_a_warn():

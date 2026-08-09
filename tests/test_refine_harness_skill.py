@@ -447,3 +447,40 @@ def test_existing_skills_keep_their_profiles(skill, profile):
     from _common import SKILL_PROFILE
 
     assert SKILL_PROFILE[skill] == profile
+
+
+# ---------------------------------------- D-01: the pipeline prerequisite
+
+def test_prerequisite_names_the_missing_producer():
+    """D-01. refine-harness reads artifacts no current Skill writes.
+
+    Each deferral was defensible alone; nothing checked their composition, because every
+    Skill is validated in isolation. The contract must say so rather than leaving the
+    Skill to look broken when it is behaving correctly.
+    """
+    body = _flat(SKILL_MD)
+    assert "reads run artifacts it does not create" in body
+    assert "run-state runtime" in body and "deferred to a later milestone" in body
+    assert "no source runs to refine" in body
+
+
+@pytest.mark.parametrize("workaround", [
+    "do not accept a conversation transcript in place of `evidence.md`",
+    "do not reconstruct evidence from a response",
+    "do not relax the evidence-reference requirement to produce something",
+])
+def test_prerequisite_forbids_working_around_the_gap(workaround):
+    """The tempting fixes all destroy the property that makes a proposal auditable."""
+    assert workaround in _flat(SKILL_MD), f"SKILL.md omits: {workaround!r}"
+
+
+def test_no_current_skill_persists_run_artifacts():
+    """The fact D-01 rests on, asserted so a future change has to notice it."""
+    from _common import extract_policy_marker
+
+    for producer in ("orchestrate", "verify-work"):
+        declared = yaml.safe_load(extract_policy_marker(
+            (SKILLS / producer / "SKILL.md").read_text(encoding="utf-8")))
+        assert declared["evidence_persistence"] == "response-only", (
+            f"{producer} now persists evidence — refine-harness's prerequisite note "
+            "in SKILL.md must be updated to match")

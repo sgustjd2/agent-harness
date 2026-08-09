@@ -45,14 +45,28 @@ runs:
 # string is a schema violation, because a string invites quoting and injection
 # problems an array cannot have.
 #
-# Python
-#   id: py-test        kind: test       command: ["python", "-m", "pytest", "-q"]
+# Python -- FIRST ARGUMENT: use the interpreter that owns this project.
+#
+# Write the project's own interpreter path, not the bare name `python`. A bare name is
+# resolved by PATH at run time, and on Windows it frequently resolves to an app-execution
+# stub that runs nothing and exits non-zero. The gate then reports `fail` while the tests
+# actually pass -- and no classification can catch it, because the process really did run.
+# See docs/m2-contract-dryrun.md, finding D-02.
+#
+# Use, in order of preference:
+#   1. the virtualenv interpreter    .venv/bin/python   (POSIX)
+#                                    .venv/Scripts/python.exe   (Windows)
+#   2. a version-qualified name      python3
+#   3. the bare name `python`        ONLY when 1 and 2 do not apply, and say so in the
+#                                    proposal so the user can correct it
+#
+#   id: py-test        kind: test       command: ["<interpreter>", "-m", "pytest", "-q"]
 #                      detected from: pytest.ini, [tool.pytest], a test directory
-#   id: py-lint        kind: lint       command: ["python", "-m", "ruff", "check", "."]
+#   id: py-lint        kind: lint       command: ["<interpreter>", "-m", "ruff", "check", "."]
 #                      detected from: .ruff.toml, [tool.ruff]
-#   id: py-typecheck   kind: typecheck  command: ["python", "-m", "mypy", "."]
+#   id: py-typecheck   kind: typecheck  command: ["<interpreter>", "-m", "mypy", "."]
 #                      detected from: mypy.ini, [tool.mypy]
-#   id: py-build       kind: build      command: ["python", "-m", "build"]
+#   id: py-build       kind: build      command: ["<interpreter>", "-m", "build"]
 #                      detected from: [build-system]
 #
 # JavaScript / TypeScript

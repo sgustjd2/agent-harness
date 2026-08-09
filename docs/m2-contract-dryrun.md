@@ -2,6 +2,9 @@
 
 _2026-08-09. Run against a disposable Python repository with passing tests._
 
+> **D-01 and D-02 are resolved** (see *Resolution* at the end). D-03, D-04 and D-05 remain
+> open decisions. A sixth defect, D-06, was found while fixing them.
+
 ## What this is, and what it is not
 
 **This is not the pilot.** [`m2-pilot-plan.md`](m2-pilot-plan.md) still needs running, and
@@ -212,3 +215,68 @@ already known.
 
 Config schema validation held throughout: every `config.yaml` produced by following the
 instructions validated against `config.schema.json` on the first attempt.
+
+
+---
+
+## Resolution
+
+D-01 and D-02 were fixed; the rest remain open.
+
+### D-01 — resolved by stating the prerequisite, not by reversing a deferral
+
+`refine-harness` now opens with a **Prerequisite** section: it reads run artifacts it does
+not create, the run-state runtime that writes them is deferred, so in this milestone there
+are usually no source runs and the correct output is *no proposal* naming what is missing.
+
+The section also forbids each tempting workaround by name — accepting a transcript in place
+of `evidence.md`, reconstructing evidence from a response, relaxing the evidence-reference
+requirement. Any of those would produce a proposal citing evidence nobody wrote down,
+which is the unauditable artifact the evidence rule exists to prevent.
+
+Options 1 and 2 from the original finding were rejected. Reversing a deliberate M2 deferral
+to close a documentation gap is the tail wagging the dog, and weakening the evidence
+contract trades the property that makes proposals reviewable for the appearance of a
+working pipeline.
+
+A test asserts the fact D-01 rests on — both producers still declare
+`evidence_persistence: response-only` — so a future change that starts persisting evidence
+fails until this note is updated to match.
+
+### D-02 — resolved at the source, plus a diagnosis that no longer disagrees
+
+- `init-project` now requires proposing **the interpreter that owns the project** — its
+  virtualenv, its version manager — never the bare name, and saying so in the proposal when
+  no project interpreter can be identified.
+- `config-template.yaml` no longer ships `["python", "-m", "pytest", "-q"]`. It shows
+  `["<interpreter>", …]` with a preference order and names the Windows stub explicitly.
+- `doctor`'s EXE-01 now reports **`warn`**, not `ok`, for a bare interpreter name when the
+  project carries its own. Previously diagnosis called the environment healthy while
+  verification called the work broken, and both were right under their own contracts.
+
+**This diverges from PRD §15.2**, whose table proposes `["python", …]`. That table
+introduces itself as candidates `init-project` *proposes*, not a fixed requirement, so
+refining a candidate stays inside the contract. Recorded here rather than changing the PRD.
+
+### D-06 — `doctor` still expected three Skills to be missing
+
+**Kind: C. Found while fixing D-02.**
+
+`doctor` listed the implemented set as four Skills and stated that `orchestrate`,
+`refine-harness` and `apply-refinement` are *"not yet implemented — their absence is
+expected and is never a fail"*. All seven shipped in M2, so a correct installation would
+have been diagnosed against a stale expectation.
+
+Fixed: PKG-04 now expects all seven, and PKG-06 — which existed only to say three were
+expected absent — was repurposed to guard the other direction, an unrecognised Skill
+directory in the installable root.
+
+Worth noting how it survived: the doctor tests asserted the *old* sentence, so completing
+M2 made the product wrong and the suite still green. The replacement test derives the
+expected set from `PLANNED_PRODUCTION_SKILLS` instead of restating it.
+
+### Still open
+
+D-03 (no *not applicable* vocabulary), D-04 (memory file content undefined, `templates/`
+unreferenced), D-05 (project-type detection pulls two ways). Each is a decision, and none
+blocks the pilot.

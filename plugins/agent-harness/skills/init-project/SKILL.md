@@ -168,6 +168,18 @@ Only `id`, `kind`, `command`, `required`, `timeout_seconds` and optionally
 Commands are argv arrays because a shell string invites quoting and injection problems
 that an array cannot have.
 
+**Name the project's own interpreter, never the bare one.** For an interpreter-based gate
+— `python`, `node`, `ruby` — propose the interpreter that owns this project (its
+virtualenv, its version manager) rather than the bare name. A bare name is resolved by
+`PATH` when the gate runs, which may be a different interpreter than the one the project's
+tooling is installed in; on Windows it is often an app-execution stub that runs nothing and
+exits non-zero. The gate then reports failure while the tests pass, and **no verification
+status can distinguish that from a real failure** — the process genuinely ran and genuinely
+exited non-zero.
+
+If no project interpreter can be identified, propose the bare name **and say so in the
+proposal**, so the user can correct it before approving.
+
 **Nothing here is executed by this Skill.** A detected command is a guess that a tool
 exists; running it to find out is exactly the side effect this Skill must not have.
 

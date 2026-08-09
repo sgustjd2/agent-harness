@@ -99,12 +99,12 @@ cannot be determined safely. A valid `vcs: none` project is not a failure.
 ### Plugin installation
 
 Check that `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` both exist, that
-`skills/` exists, and that the currently implemented Skills are present: `plan-work`,
-`init-project`, `verify-work`, `doctor`, plus the `m1-discovery-fixture` compatibility
-fixture.
+`skills/` exists, and that **all seven** production Skills are present — `plan-work`,
+`init-project`, `verify-work`, `doctor`, `orchestrate`, `refine-harness`,
+`apply-refinement` — plus the `m1-discovery-fixture` compatibility fixture.
 
-`orchestrate`, `refine-harness` and `apply-refinement` are **not yet implemented**. Their
-absence is expected and is **never** a `fail`.
+Any one of them missing is a `fail`. A Skill directory that is **not** on that list is
+also a finding: the installable root admits exactly the Skills the milestone declares.
 
 If the plugin root cannot be resolved safely, report `unknown`. Do not guess a
 home-directory cache path. Never use `~/.claude/plugins/cache` as a lookup root.
@@ -194,6 +194,17 @@ Order of attempts:
    executing a lookup.
 
 **An `unknown` executable is never a `fail`.** We do not know; that is the finding.
+
+**Finding a file does not mean finding the right interpreter.** When a gate's first argv
+token is a bare interpreter name (`python`, `node`, `ruby`) and the project carries its own
+interpreter — a virtualenv, a version-manager file — report **`warn`**, not `ok`: the name
+will be resolved by `PATH` at run time and may not be the interpreter the project's tooling
+lives in. On Windows it may be an app-execution stub that runs nothing.
+
+This matters because the failure it produces is invisible downstream: the gate exits
+non-zero, verification correctly reports failure, and nothing distinguishes it from a real
+one. Saying `ok` here because a file exists on `PATH` would let diagnosis call an
+environment healthy while verification calls the work broken.
 
 ### Host instructions
 

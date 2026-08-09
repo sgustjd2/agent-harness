@@ -23,12 +23,13 @@ installation is sound. Co-located manifests prove packaging compatibility, not i
 | PKG-01 | Claude manifest | always | `.claude-plugin/plugin.json` present | — | missing | root unresolvable |
 | PKG-02 | Codex manifest | always | `.codex-plugin/plugin.json` present | — | missing | root unresolvable |
 | PKG-03 | `skills/` directory | always | present | — | missing | root unresolvable |
-| PKG-04 | Implemented Skills present | always | `plan-work`, `init-project`, `verify-work`, `doctor` all present | — | any one missing | root unresolvable |
+| PKG-04 | All seven production Skills present | always | `plan-work`, `init-project`, `verify-work`, `doctor`, `orchestrate`, `refine-harness`, `apply-refinement` all present | — | any one missing | root unresolvable |
 | PKG-05 | Compatibility fixture | always | `m1-discovery-fixture` present | absent | — | root unresolvable |
-| PKG-06 | Unimplemented Skills | always | `orchestrate`, `refine-harness`, `apply-refinement` absent — expected | — | — | — |
+| PKG-06 | No unexpected Skill directory | always | only allowlisted Skills present | a directory not on the allowlist | — | root unresolvable |
 
-PKG-06 can only be `ok`. Their absence is the current design, and reporting it as a
-problem would send someone looking for a bug that does not exist.
+PKG-06 changed meaning once every planned Skill was implemented: there is no longer an
+"expected to be absent" set, so it now guards the other direction — an unrecognised Skill
+directory in the installable root.
 
 ## Skill integrity
 
@@ -79,7 +80,7 @@ only — never a judgement about whether a recorded fact is true.
 
 | ID | Diagnostic | Applies | `ok` | `warn` | `fail` | `unknown` |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| EXE-01 | Gate executable appears available | gates configured | found by static inspection | — | explicit repo-relative path does not exist | cannot establish without executing a lookup |
+| EXE-01 | Gate executable appears available | gates configured | found by static inspection, and not a bare interpreter name where the project owns an interpreter | **bare interpreter name resolved by `PATH` while the project carries its own** | explicit repo-relative path does not exist | cannot establish without executing a lookup |
 | EXE-02 | Gate working directory contained | gates configured | inside the repository | — | escapes the repository | unresolvable |
 
 **EXE-01 never runs anything.** No gate, no subset of a gate, no `--version`, no
