@@ -33,14 +33,22 @@ installs_packages: false
 modifies_user_settings: false
 command_definition: argv-array
 verification_default: Not Run
-evidence_persistence: response-only
+evidence_persistence: run-artifacts
+writes_run_artifacts: true
+allowed_path_roots:
+  - .agent-harness/runs/
 -->
 
-`read_only: false` means only that subprocesses run, so this Skill is not
-side-effect-free. It is **not** permission to edit anything: `modifies_source` and
-`modifies_config` are false, and this Skill has no write surface at all. The gates
-themselves may of course change files — that is the project's own decision, recorded in
-its own configuration, and it is not this Skill writing.
+`read_only: false` means subprocesses run and the run's own record is written. It is
+**not** permission to edit anything else: `modifies_source` and `modifies_config` are
+false, and the entire write surface is one run directory. The gates themselves may of
+course change files — that is the project's own decision, recorded in its own
+configuration, and it is not this Skill writing.
+
+**The write needs no separate approval, and grants nothing further.** Execution approval
+covers the record the execution produces; a verifier that ran the gates but could not
+write down what happened would be asking you to take its word for it, which is what
+evidence exists to prevent. It does not extend one path beyond `.agent-harness/runs/`.
 
 ## Two phases, always
 
@@ -219,11 +227,36 @@ perfect redaction is a promise nobody can keep.
 
 ## Persistence
 
-**Return the evidence in the response. Write nothing.** This milestone has no run-state
-runtime, so this Skill does not create `evidence.md` or `result.md`.
+**Write the run artifacts, and return the evidence in the response as well.** Both — the
+response is what the user reads now, the files are what anything later can cite.
 
-If the user explicitly asks to save evidence, show the target path first and get approval
-before writing. Do not build run lifecycle management here.
+| File | When | Shape |
+| :--- | :--- | :--- |
+| `.agent-harness/runs/<run-id>/evidence.md` | one item per gate, as each finishes | **append-only** |
+| `.agent-harness/runs/<run-id>/result.md` | once, at the end, in every terminal state | written once, never revised |
+
+Use the run id you were given. Without one, mint `YYYYMMDD-HHMMSS-<slug>` and say which
+you used — a record nobody can locate is not a record.
+
+**Append-only means append-only.** Never edit or delete an existing evidence item. A
+correction is a new item saying what it corrects. An evidence file that can be revised
+after someone has read it is a file whose history nobody can trust, and the whole reason
+to write it down was to stop results being restated from memory.
+
+`result.md` is written in **every** terminal state, including `blocked` and `failed`. A
+run with no result file is indistinguishable from a run that never happened.
+
+### When the project is not initialized
+
+`.agent-harness/` may not exist — nobody has run `init-project` yet.
+
+**Report the gate results in the response and say the evidence could not be persisted,
+naming `init-project` as the fix.** Do not create `.agent-harness/` to hold the file:
+initialization is a separate, approval-gated act, and a verifier is not the thing that
+performs it.
+
+Verification you can read is worth more than verification that refused to run because it
+could not file the paperwork.
 
 ## References
 

@@ -83,7 +83,8 @@ experimental.
 | **M2** | **shared Skill bodies — all seven implemented** | **done** |
 | **M3** | **Claude Code adapter — role subagents, adapter layer, manifest, host runbook** | **built** — exit criteria need a host session |
 | **M4** | **Codex adapter — role templates, adapter layer, install guide, host runbook** | **built** — exit criteria need a host session |
-| M5–M8 | state, refinement, pilot, release | not started |
+| **M5** | **portable memory and verification — run-state persistence** | **in progress** — 1 of 4 slices |
+| M6–M8 | refinement, pilot, release | not started |
 
 **Exit criteria: 14 of 17 met.** The three unmet criteria all need host access that this
 phase deliberately did not take — see [`docs/m1-traceability.md`](docs/m1-traceability.md).

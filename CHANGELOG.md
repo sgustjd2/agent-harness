@@ -5,6 +5,37 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed — M5 slice 1: run artifacts are written, and D-01 is closed
+
+`orchestrate` and `verify-work` now write `.agent-harness/runs/<run-id>/evidence.md` and
+`result.md`. Through M4 both returned evidence in the response and persisted nothing,
+which left `refine-harness` and `apply-refinement` reading artifacts nothing produced —
+**dry-run finding D-01**, closed here.
+
+- **The first widening of a write surface in this project's history**, so it is kept to
+  what was justified. `verify-work` gains exactly one root, `.agent-harness/runs/`, which
+  is narrower than `init-project`'s `.agent-harness/`: a verifier has no business touching
+  config or memory. `modifies_source` and `modifies_config` stay false.
+- **No separate approval.** Execution approval covers the record the execution produces; a
+  verifier that ran the gates but could not write down what happened would be asking the
+  user to take its word for it. It extends not one path further.
+- **Evidence is append-only and a result is written in every terminal state**, including
+  `blocked` and `failed`. A correction is a new entry, never an edit — a file that can be
+  revised after someone reads it is a file whose history nobody can trust. A run with no
+  result file is indistinguishable from a run that never started.
+- **Neither producer creates `.agent-harness/`.** If the project is uninitialized they
+  report results and say persistence failed, naming `init-project`. Verification you can
+  read beats verification withheld because the paperwork failed.
+- `orchestrate` keeps `run_state_runtime: deferred` → `active`, but the **queue and resume
+  engine stay out of scope**: writing down what happened does not require them.
+
+**The guard worked.** `test_no_current_skill_persists_run_artifacts` existed only to fail
+when this changed, with a message naming the file to update. It failed, the message was
+right, and the note it pointed at was rewritten.
+
+`docs/state-model.md` is written — the operational half of §14, tested against the
+constants rather than against itself.
+
 ### Added — M4 slice 4: Codex host runbook and the Q-IMPL record
 
 `docs/m4-host-runbook.md` covers ATS-002, ATS-019, MET-003 parity and Gate A recognition.
