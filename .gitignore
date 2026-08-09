@@ -24,3 +24,8 @@ dist/
 # Local development virtual environment. Never committed.
 .venv/
 venv/
+
+# Output from the Q-IMPL-007 probe fixture. Written during a manual host run; the
+# RESULT is recorded in docs/m3-host-runbook.md, and the raw file is not committed --
+# a stale probe artifact in the tree would read as evidence of a run that is over.
+.probe-output/

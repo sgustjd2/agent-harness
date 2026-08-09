@@ -81,7 +81,7 @@ experimental.
 | M1.4A | Claude non-interactive load and component discovery | done |
 | M1.4B | Codex Skill discovery, ChatGPT Desktop, hooks, helper execution | **not started** |
 | **M2** | **shared Skill bodies — all seven implemented** | **done** |
-| **M3** | **Claude Code adapter — role subagents, adapter layer, final manifest** | **in progress** — 3 of 4 slices |
+| **M3** | **Claude Code adapter — role subagents, adapter layer, manifest, host runbook** | **built** — exit criteria need a host session |
 | M4–M8 | Codex adapter, state, refinement, pilot, release | not started |
 
 **Exit criteria: 14 of 17 met.** The three unmet criteria all need host access that this

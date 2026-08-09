@@ -1,0 +1,8 @@
+{
+  "name": "m3-tool-enforcement-probe",
+  "description": "Manual host-test fixture for Q-IMPL-007. Not a product plugin; never published.",
+  "version": "0.0.0",
+  "author": {
+    "name": "agent-harness maintainers"
+  }
+}

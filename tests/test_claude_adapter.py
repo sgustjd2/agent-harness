@@ -137,13 +137,25 @@ def test_every_evidence_label_is_defined(label):
 
 
 def test_the_expected_agent_count_is_derived_not_asserted_by_hand():
-    """The component inventory read Agents 0 in M1.4A. M3 changed what it should say.
+    """The component inventory read Agents 0 in M1.4A, and now reads the role count.
 
     Pinned against the role list rather than a literal, so adding a seventh role makes
     this fail until the note is updated — which is the only way a number in prose stays
     true.
     """
-    assert f"agents must now read {len(PLUGIN_AGENT_ROLES)}" in _flat(NOTES)
+    count = len(PLUGIN_AGENT_ROLES)
+    flat = _flat(NOTES)
+    assert f"agents {count}" in flat
+    assert f"**agents {count}** is what a correct installation reports" in flat
+
+
+def test_discovery_is_not_recorded_as_enforcement():
+    """The host loading six role definitions says nothing about withholding a tool.
+
+    These are the two claims most likely to be collapsed into one, because the same
+    command produced the evidence for the first and none for the second.
+    """
+    assert "discovery is not enforcement" in _flat(NOTES)
 
 
 def test_the_absence_of_gate_a_is_recorded():
