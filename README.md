@@ -81,7 +81,8 @@ experimental.
 | M1.4A | Claude non-interactive load and component discovery | done |
 | M1.4B | Codex Skill discovery, ChatGPT Desktop, hooks, helper execution | **not started** |
 | **M2** | **shared Skill bodies — all seven implemented** | **done** |
-| M3–M8 | adapters, state, refinement, pilot, release | not started |
+| **M3** | **Claude Code adapter — role subagents, adapter layer, final manifest** | **in progress** — 3 of 4 slices |
+| M4–M8 | Codex adapter, state, refinement, pilot, release | not started |
 
 **Exit criteria: 14 of 17 met.** The three unmet criteria all need host access that this
 phase deliberately did not take — see [`docs/m1-traceability.md`](docs/m1-traceability.md).
@@ -265,16 +266,18 @@ Skill이 보이는지 확인:
 claude --plugin-dir ./plugins/agent-harness plugin details agent-harness@inline
 ```
 
-`Skills (8)` — fixture 1개 + production 7개가 나오면 정상입니다.
+`Skills (8)`, `Agents (6)`이 나오면 정상입니다 — fixture 1개 + production Skill 7개,
+그리고 M3에서 추가된 role subagent 6개입니다. Agents가 6보다 작으면 role 정의가
+로드되지 않은 것이고, 모델 호출 없이 확인되는 유일한 점검입니다.
 
 #### marketplace 설치 — 아직 검증 안 됨
 
 `.claude-plugin/marketplace.json`과 `.agents/plugins/marketplace.json`이 생성되어 있고
 `claude plugin validate --strict`를 통과하지만, **실제 설치는 해 본 적이 없습니다.**
 Codex CLI의 marketplace 등록만 격리 환경에서 확인했습니다. 자세한 절차는
-[`docs/install-claude-code.md`](docs/install-claude-code.md)와
-[`docs/install-codex.md`](docs/install-codex.md)를 참고하세요 — 두 문서 모두 아직
-초안입니다.
+[`docs/install-claude-code.md`](docs/install-claude-code.md)를 보세요 — M3에서 작성됐고,
+어떤 단계가 실제로 실행됐고 어떤 단계가 문서상 근거뿐인지 맨 위 표에 구분해뒀습니다.
+[`docs/install-codex.md`](docs/install-codex.md)는 아직 초안이며 M4에서 작성됩니다.
 
 **marketplace 등록은 플러그인 설치가 아닙니다.** 등록은 "이런 플러그인이 있다"를
 호스트에 알리는 것이고, 설치·활성화는 별개 단계입니다.

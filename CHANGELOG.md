@@ -5,6 +5,31 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed — M3 slice 3: final Claude manifest, catalog and installation guide
+
+- **`github.com/OWNER/agent-harness` shipped in both manifests.** `homepage` and
+  `repository` are rendered as links by the host, so the placeholder was a 404 in front
+  of anyone who clicked it. Both now point at the real repository.
+- **Both manifest descriptions still said "M1 scaffold — Skills are placeholders".**
+  Same defect class as dry-run D-06: completing M2 made the metadata false, and a
+  manifest with a wrong description is still a valid manifest, so nothing failed. They
+  now say `Experimental`, which is accurate — three M1 exit criteria are unmet and the
+  pilot has not run.
+- **`docs/install-claude-code.md` is written.** It opens with a table separating what was
+  run against a real host (`--plugin-dir` session loading, component discovery, on
+  2.1.195) from what is documented and unexercised (marketplace registration and
+  installation). Presenting those in the same voice would claim evidence that does not
+  exist; ATS-001 is named as the test that would change the rows.
+- The expected counts in the guide — `Skills 8`, `Agents 6` — are **derived from the
+  tree**, so adding a Skill or a role fails the test until the guide is updated. Eight,
+  not seven: the compatibility fixture is discoverable and a reader will see it.
+- A test now asserts the guide and the `CLAUDE.md` marker block list the **same** seven
+  Skills. Two user-facing lists of the same thing disagree exactly once — silently.
+
+Schema `$id` values still carry `OWNER`. Left deliberately: those are JSON Schema identity
+URIs that are never fetched, and rewriting nine of them would be a schema change with no
+user-facing effect.
+
 ### Added — M3 slice 2: the Claude Code adapter layer
 
 `adapters/claude/` was three placeholder files saying they would be written in M3. They
@@ -523,5 +548,5 @@ Three defects the hand-written tooling had hidden:
 
 M1 — repository and validation scaffold. No production Skill behaviour.
 
-[Unreleased]: https://github.com/OWNER/agent-harness/compare/v0.0.1...HEAD
-[0.0.1]: https://github.com/OWNER/agent-harness/releases/tag/v0.0.1
+[Unreleased]: https://github.com/sgustjd2/agent-harness/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/sgustjd2/agent-harness/releases/tag/v0.0.1
