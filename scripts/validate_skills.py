@@ -74,6 +74,9 @@ REQUIRED_REFERENCES = {
     "refine-harness": ["references/proposal-contract.md",
                        "references/evidence-and-dedup.md",
                        "references/proposal-template.md"],
+    "apply-refinement": ["references/approval-gates.md",
+                         "references/application-contract.md",
+                         "references/rollback-contract.md"],
 }
 
 # Never inside a Skill: these slices are instruction-only, so there is nothing to

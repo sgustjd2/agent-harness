@@ -283,8 +283,8 @@ PLANNED_PRODUCTION_SKILLS = [
 # it says, so an unimplemented name in the installable root is a product surface with
 # nothing behind it.
 IMPLEMENTED_PRODUCTION_SKILLS = ["plan-work", "init-project", "verify-work",
-                                "doctor", "orchestrate",
-                                "refine-harness"]            # M2 slices 1-6
+                                "doctor", "orchestrate", "refine-harness",
+                                "apply-refinement"]          # M2 complete
 
 # Still unimplemented, and therefore still rejected in the installable root.
 FORBIDDEN_PRODUCTION_SKILLS = [
@@ -303,7 +303,7 @@ ALLOWED_SKILLS = [DISCOVERY_FIXTURE_SKILL, *IMPLEMENTED_PRODUCTION_SKILLS]
 # is read-only, so implicit selection costs a document, not a mutation.
 IMPLICIT_INVOCATION_MUST_BE_OFF = [DISCOVERY_FIXTURE_SKILL, "init-project",
                                    "verify-work", "orchestrate",
-                                   "refine-harness"]
+                                   "refine-harness", "apply-refinement"]
 
 # --------------------------------------------------------------------------
 # Skill safety profiles
@@ -380,6 +380,37 @@ SKILL_SAFETY_PROFILES = {
         "command_definition": "argv-array",
         "verification_default": "Not Run",
         "evidence_persistence": "response-only",
+    },
+    # Applies ONE already-approved proposal, then verifies, then records how to undo it.
+    #
+    # Widest authority in the product, and the only Skill that both writes and executes.
+    # Execution is narrow: the project's own configured verification gates, which have a
+    # validated argv/timeout representation in config.schema.json -- the same contract
+    # verify-work runs under. That is why executing here is acceptable where orchestrate's
+    # was not: orchestrate had no schema for its commands, this has one.
+    #
+    # Gate A (host invocation policy) and Gate B (change approval, in the body) are
+    # INDEPENDENT. Gate B must hold on a host with no invocation policy at all, so Gate A
+    # is defence in depth and never a substitute.
+    "approved-proposal-application": {
+        **UNIVERSAL_SKILL_POLICY,
+        "read_only": False,
+        "executes_commands": True,
+        "executes_configured_gates_only": True,
+        "spawns_agents": False,
+        "requires_explicit_invocation": True,
+        "requires_mutation_approval": True,
+        "applies_single_proposal_only": True,
+        "modifies_proposal_targets_only": True,
+        "refuses_skill_self_modification": True,
+        "validates_current_hash": True,
+        "records_rollback_information": True,
+        "reverts_on_verification_failure": True,
+        "persists_approval_token": False,
+        "requires_repository_contained_paths": True,
+        "rejects_symlink_escape": True,
+        "installs_packages": False,
+        "modifies_user_settings": False,
     },
     # Carries out a ready plan: writes planned source paths and may delegate to
     # subagents. It does NOT execute commands in this milestone.
@@ -460,11 +491,13 @@ SKILL_PROFILE = {
     "doctor": "read-only",
     "orchestrate": "plan-bounded-orchestration",
     "refine-harness": "proposal-only-mutation",
+    "apply-refinement": "approved-proposal-application",
 }
 
 # Only this profile may run a subprocess. Asserted in tests so a future profile cannot
 # acquire execution by inheritance without someone deciding to grant it.
-PROFILES_PERMITTING_EXECUTION = ["bounded-verification"]
+PROFILES_PERMITTING_EXECUTION = ["bounded-verification",
+                                 "approved-proposal-application"]
 
 # Delegating to subagents is narrower still than executing. verify-work runs commands but
 # must never spawn an agent: a verifier that could delegate could delegate its way around
@@ -473,7 +506,9 @@ PROFILES_PERMITTING_AGENT_SPAWN = ["plan-bounded-orchestration"]
 
 # A mutation-capable Skill must also declare its entire write surface. Anything outside
 # these roots is a path the user never agreed to.
-PROFILES_REQUIRING_PATH_ROOTS = ["approval-gated-mutation", "proposal-only-mutation"]
+PROFILES_REQUIRING_PATH_ROOTS = ["approval-gated-mutation",
+                                 "proposal-only-mutation",
+                                 "approved-proposal-application"]
 ALLOWED_WRITE_PATH_ROOTS = {
     "init-project": [".agent-harness/", "CLAUDE.md", "AGENTS.md"],
     # One directory, and only ever one new file inside it. Note this is NARROWER than
@@ -481,6 +516,9 @@ ALLOWED_WRITE_PATH_ROOTS = {
     # over the same tree, which is the point -- memory, config and run artifacts each
     # keep their own approval path.
     "refine-harness": [".agent-harness/proposals/"],
+    # Whatever a proposal target_path names, bounded to these roots.
+    # plugins/** is absent on purpose: the plugin never rewrites itself.
+    "apply-refinement": [".agent-harness/", "CLAUDE.md", "AGENTS.md"],
 }
 
 # Roots a Skill may never declare: user scope is out of bounds (SEC-17), and so is

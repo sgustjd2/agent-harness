@@ -145,9 +145,10 @@ def test_execution_and_spawning_are_separately_gated():
     from _common import (PROFILES_PERMITTING_AGENT_SPAWN, PROFILES_PERMITTING_EXECUTION,
                          SKILL_SAFETY_PROFILES, UNIVERSAL_SKILL_POLICY)
 
-    # orchestrate does NOT execute in this milestone; verify-work is the only one that may.
-    assert PROFILES_PERMITTING_EXECUTION == ["bounded-verification"]
+    # orchestrate does NOT execute. Execution is granted elsewhere (verification, and
+    # applying an approved proposal) but never to this profile.
     assert "plan-bounded-orchestration" not in PROFILES_PERMITTING_EXECUTION
+    assert "bounded-verification" in PROFILES_PERMITTING_EXECUTION
     assert PROFILES_PERMITTING_AGENT_SPAWN == ["plan-bounded-orchestration"]
     assert SKILL_SAFETY_PROFILES["bounded-verification"]["spawns_agents"] is False
     assert SKILL_SAFETY_PROFILES["bounded-verification"]["executes_commands"] is True
@@ -465,21 +466,25 @@ def test_milestone_allowlist_includes_orchestrate():
     assert {d.name for d in SKILLS.iterdir() if d.is_dir()} == set(ALLOWED_SKILLS)
 
 
-@pytest.mark.parametrize("name", FORBIDDEN_PRODUCTION_SKILLS)
-def test_remaining_production_skills_are_still_rejected(plugin_tree, name):
-    """30. apply-refinement."""
+def test_names_outside_the_allowlist_are_rejected(plugin_tree):
+    """30. Every planned production Skill is now implemented, so
+    FORBIDDEN_PRODUCTION_SKILLS is empty and the old parameterization would have
+    generated no cases at all — silently losing the check. The boundary it protected is
+    unchanged, so it is exercised with a name that is not on the allowlist.
+    """
     import validate_skills
 
-    assert not (SKILLS / name).exists()
+    assert FORBIDDEN_PRODUCTION_SKILLS == [], (
+        "a production Skill is unimplemented again; restore the parameterized check")
 
-    bad = plugin_tree / "skills" / name
+    bad = plugin_tree / "skills" / "not-a-planned-skill"
     bad.mkdir(parents=True)
     (bad / "SKILL.md").write_text(
-        f"---\nname: {name}\ndescription: placeholder\n---\n\nplaceholder\n",
+        "---\nname: not-a-planned-skill\ndescription: placeholder\n---\n\nplaceholder\n",
         encoding="utf-8")
     status, codes = _run(validate_skills.check, plugin_tree)
     assert status != 0
-    assert "PRODUCTION_SKILL_IN_ROOT" in codes, codes
+    assert "FORBIDDEN_COMPONENT_IN_ROOT" in codes, codes
 
 
 @pytest.mark.parametrize("skill,profile,executes,spawns", [

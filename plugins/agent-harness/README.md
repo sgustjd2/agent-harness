@@ -15,6 +15,7 @@ skills/verify-work/             production Skill (experimental), bounded executi
 skills/doctor/                  production Skill (experimental), read-only diagnostics
 skills/orchestrate/             production Skill (experimental), plan-bounded delegation
 skills/refine-harness/          production Skill (experimental), proposal-only
+skills/apply-refinement/        production Skill (experimental), approved application
 core/schemas/                   five packaging schemas
 core/schemas/state/             state schemas -- NOT packaging evidence
 adapters/claude/                Claude integration
@@ -36,11 +37,11 @@ workflow layer, two thin adapters.
 | `doctor` | production | **experimental**, read-only harness diagnostics |
 | `orchestrate` | production | **experimental**, plan-bounded orchestration (no command execution) |
 | `refine-harness` | production | **experimental**, proposal-only refinement |
+| `apply-refinement` | production | **experimental**, approved-proposal application |
 
-**No other production Skill is implemented.** `apply-refinement` is planned, and
-`validate_skills.py` rejects any of those names appearing here until each is actually
-built. A shipped `SKILL.md` is host-discoverable whatever its body says, so a
-placeholder would be a product surface with nothing behind it.
+**All seven planned production Skills are now implemented.** `validate_skills.py`
+still admits only the Skills on its allowlist — any other directory name is rejected — so
+the boundary that kept unimplemented names out now keeps unknown ones out.
 
 ### `m1-discovery-fixture`
 
@@ -221,13 +222,42 @@ disagreement the reviewer needs.
 `plugins/agent-harness/skills/**`, and `apply-refinement` must refuse self-modification
 when it is built.
 
-### How the six production Skills are checked
+### `apply-refinement`
+
+Applies **one** approved proposal, verifies the result, and records how to undo it. The
+only Skill that changes memory or configuration, and the last stage of a deliberately slow
+path: `refine-harness` proposes → a human reviews → this applies.
+
+**Two independent gates.** Gate A (`agents/openai.yaml`) stops a model selecting it from a
+prompt. Gate B — the eight-clause change-approval gate — lives in the body and holds on
+every host, including ones with no invocation policy at all. **Gate A never substitutes
+for Gate B**; if it did, the hosts that lack it would be unprotected.
+
+Before writing it verifies each item's `current_hash`, so a file that changed after the
+proposal was written stops the application rather than receiving a diff nobody reviewed.
+Rollback information is recorded **before** the first write — afterwards would describe
+the state the change already produced. If verification fails, everything is reverted and
+the proposal becomes `failed`.
+
+**A `skill` item is refused outright.** `plugins/agent-harness/skills/**` is absent from
+its write roots and there is no code path for it: a plugin that can rewrite its own Skills
+is lost on the next update and outside the trust model that made it installable.
+
+### How the seven production Skills are checked
 
 All six declare an `agent-harness:policy` marker, but against **different safety
-profiles**: `plan-work` and `doctor` are `read-only`, `init-project` is
-`approval-gated-mutation`, `verify-work` is `bounded-verification`, `orchestrate` is
-`plan-bounded-orchestration`, `refine-harness` is `proposal-only-mutation`. One flattened
-table would let a Skill that writes files claim it does not.
+profiles**, one per kind of authority:
+
+| Profile | Skills |
+| :--- | :--- |
+| `read-only` | `plan-work`, `doctor` |
+| `approval-gated-mutation` | `init-project` |
+| `bounded-verification` | `verify-work` |
+| `plan-bounded-orchestration` | `orchestrate` |
+| `proposal-only-mutation` | `refine-harness` |
+| `approved-proposal-application` | `apply-refinement` |
+
+One flattened table would let a Skill that writes files claim it does not.
 
 `refine-harness` needed its own profile rather than reusing `approval-gated-mutation`:
 that profile requires mutation approval tied to an **already-shown proposal**, and this
@@ -235,12 +265,16 @@ Skill is what produces one. Reusing it would have been circular — the artifact
 to exist before it could be authorized to exist. Explicit invocation authorizes *creating*
 the proposal; applying it is a separate gate, one stage later.
 
-Execution and delegation are granted **separately**, both as explicit lists. Exactly one
-profile may run commands (`bounded-verification`) and exactly one may spawn agents
-(`plan-bounded-orchestration`) — and they are different profiles. `verify-work` cannot
-delegate, because a verifier that could would be able to delegate its way around its own
-gate list; `orchestrate` cannot execute, because no validated command representation
-exists for it to execute safely.
+Execution and delegation are granted **separately**, both as explicit lists. Two
+profiles may run commands — `bounded-verification` and `approved-proposal-application`,
+and both are restricted to the project's *configured* verification gates, which have a
+validated argv/timeout representation. Exactly one may spawn agents
+(`plan-bounded-orchestration`), and it is a third profile.
+
+`verify-work` cannot delegate, because a verifier that could would be able to delegate its
+way around its own gate list. `orchestrate` cannot execute, because no validated command
+representation exists for plan tasks. `apply-refinement` may execute *only* the configured
+gates, because that is what deciding "did this change break anything" requires.
 
 `doctor` reusing `read-only` unchanged is the point of having profiles: a diagnostic that
 needed the profile widened to fit would not have been a diagnostic.

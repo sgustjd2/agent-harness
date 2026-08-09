@@ -258,7 +258,11 @@ def test_init_project_is_on_the_allowlist_and_the_tree_matches_it():
     assert {d.name for d in SKILLS.iterdir() if d.is_dir()} == set(ALLOWED_SKILLS)
 
 
-@pytest.mark.parametrize("name", FORBIDDEN_PRODUCTION_SKILLS)
+# FORBIDDEN_PRODUCTION_SKILLS is empty now that all seven are implemented. An
+# empty parametrize SKIPS silently, so the guard would stop running without
+# anyone noticing -- fall back to a name that is not on the allowlist.
+@pytest.mark.parametrize(
+    "name", FORBIDDEN_PRODUCTION_SKILLS or ["not-a-planned-skill"])
 def test_unimplemented_production_skills_are_still_rejected(plugin_tree, name):
     """14. Every not-yet-implemented name must still fail in the installable root."""
     import validate_skills
@@ -272,7 +276,8 @@ def test_unimplemented_production_skills_are_still_rejected(plugin_tree, name):
         encoding="utf-8")
     status, codes = _run(validate_skills.check, plugin_tree)
     assert status != 0
-    assert "PRODUCTION_SKILL_IN_ROOT" in codes, codes
+    assert {"PRODUCTION_SKILL_IN_ROOT", "FORBIDDEN_COMPONENT_IN_ROOT"} & set(codes), \
+        codes
 
 
 def test_plan_work_was_not_modified_by_this_slice():
