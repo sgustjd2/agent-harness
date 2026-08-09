@@ -19,9 +19,17 @@ cross-version contract.
 Skills 1, Agents 0, Hooks 0, MCP 0, LSP 0 — from a plugin root that also contained a
 `.codex-plugin/` manifest, which is the co-location evidence.
 
-That inventory is the cheapest post-install check available, and M3 changed what it
-should say: **Agents must now read 6.** A lower number means the role definitions did not
-load, and it is visible without invoking a model.
+**Observed, M3.** The same command now reads **Skills 8, Agents 6**, naming all six roles.
+The count moving from 0 to 6 is the mechanism `../../agents/` depends on — that the host
+discovers plugin-root role definitions at all — established by running it rather than by
+reading documentation. Always-on cost was reported as ~1,524 tokens.
+
+That inventory is also the cheapest post-install check available: **Agents 6** is what a
+correct installation reports, a lower number means the role definitions did not load, and
+seeing it costs no model call.
+
+**Discovery is not enforcement.** The host loading six role definitions says nothing about
+whether it withholds a tool one of them does not list. That is Q-IMPL-007, below.
 
 **Observed.** Session-scoped loading from a directory path works, including a path
 containing spaces, and creates no installed record. Marketplace installation is
@@ -40,6 +48,11 @@ are prose in the body.
 **Open — Q-IMPL-007.** Whether the host refuses a tool outside the list at runtime. The
 allowlist's *expressiveness* is settled by construction and recorded in
 `docs/compatibility.md`; its *enforcement* needs a write-attempt test on a live host.
+
+That test now exists and is ready to run: `RB-M3-05` in `docs/m3-host-runbook.md`. Its
+fixture is built so that instruction-level compliance and tool-level enforcement produce
+*different* observations — the naive version of the test produces the same observation for
+both, which is the confusion Q-IMPL-007 is about.
 
 ## Agent Teams
 

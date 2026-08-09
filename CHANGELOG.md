@@ -5,6 +5,33 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — M3 slice 4: host runbook and the Q-IMPL-007 probe
+
+M3's four exit criteria (ATS-001, ATS-003, ATS-004, ATS-005) are manual host tests. This
+slice makes them runnable rather than running them.
+
+- **`docs/m3-host-runbook.md`** — procedure and record in one file, filled in as you go.
+  Reuses the M2 dry-run's C/A/U failure classification, because the distinction sends the
+  fix to a different place each time.
+- **`Agents 6` is now Observed, not expected.** `plugin details` was run non-interactively
+  against the real host: `Skills 8, Agents 6`, all six roles named, ~1,524 always-on
+  tokens, on 2.1.195. M1.4A read `Agents 0` from the same command, so the host discovering
+  plugin-root role definitions — the mechanism slice 1 rests on — is established by
+  running it. **Discovery is not enforcement**, and the two are recorded separately.
+- **The Q-IMPL-007 fixture is built around why the obvious test fails.** Point a read-only
+  agent at a file and ask it to write: if the file is absent, that is equally consistent
+  with the agent declining on instruction and with the host withholding the tool — the
+  two possibilities being told apart. So the probe *instructs* the attempt and asks which
+  of three things happened, and the runbook checks the filesystem too, because the report
+  is a model's account of itself.
+- **ATS-005 cannot be closed as literally written**, and the runbook says so. It verifies
+  against `evidence.md`, which no M2 or M3 Skill writes — dry-run finding D-01 resurfacing
+  at the acceptance-test level. Recording a response-based pass as the artifact-based one
+  would hide a milestone dependency behind a green checkmark.
+
+M3's build is complete. Its exit criteria remain unmet, all four needing the same host
+session as the M2 pilot.
+
 ### Changed — M3 slice 3: final Claude manifest, catalog and installation guide
 
 - **`github.com/OWNER/agent-harness` shipped in both manifests.** `homepage` and

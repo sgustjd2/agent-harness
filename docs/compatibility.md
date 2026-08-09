@@ -262,6 +262,16 @@ so in its own text; `validate_agents.py` rejects one that claims otherwise.
 property of Claude Code, not of these files, and settling it needs the write-attempt
 test the PRD describes — a host session, the same blocker as E6, E12 and E13.
 
+The fixture for it is written: `tests/fixtures/host-tests/agent-tool-enforcement/`, run
+via `RB-M3-05` in `docs/m3-host-runbook.md`. It is built around one problem — a read-only
+agent that declines on instruction and a read-only agent whose tool was withheld leave the
+**same** evidence, so the probe instructs the attempt explicitly and asks which of the two
+happened.
+
+What *is* now observed, non-interactively on 2.1.195: the host **discovers** all six
+plugin-root role definitions (`Agents 6`, up from `Agents 0` in M1.4A). Discovery is not
+enforcement, and the two are recorded separately for that reason.
+
 So the fallback the PRD names (demote to an instruction-level constraint) is **not**
 taken: the constraint is tool-level as designed, and what remains unverified is the
 host's enforcement of it. Recording those as the same thing would overstate one and
