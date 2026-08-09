@@ -202,7 +202,11 @@ promoted.
 
 ## Phase 3 — recording
 
-One row per Skill:
+Fill in [`m2-pilot-record.md`](m2-pilot-record.md) **as you go**, not afterwards — a record
+written from memory at the end is where "it mostly worked" comes from. It carries a row per
+check, the five deliberate breaks, and the C / A / U classification.
+
+Summary shape:
 
 | Skill | Invoked | Contract honoured | Kind of failure | Evidence | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- |
