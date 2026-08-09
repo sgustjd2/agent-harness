@@ -5,6 +5,33 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — M4 slice 2: the Codex adapter layer
+
+`capability-notes.md` and `agents-md-block.md` were placeholders saying they would be
+written in M4. The three M1 experiment records beside them are untouched — they are
+results, and two of their questions are still open.
+
+- **Codex has Gate A and Claude does not.** The invocation gate lives in
+  `agents/openai.yaml` on this host; Claude Code has none. Claude enforces role
+  permissions through a tools allowlist; Codex has no tool-level equivalent. **The
+  asymmetry runs both ways**, and a document that cast one host as the weaker one
+  throughout would be wrong in whichever direction it picked.
+- **Skill discovery on Codex is still `Not Run` (E6).** Registration and cache
+  preservation show the files arrive; nothing yet shows the host offers them. The
+  install-class subcommand keeps its PROC-001 caveat — it worked on one alpha and is not
+  the documented stable path.
+- **The `AGENTS.md` block is not the `CLAUDE.md` block.** Same sections, same paths, same
+  seven Skills — different invocation (`$<skill>` and `@<skill>` versus
+  `/agent-harness:<name>`) and different role wording, because Codex has no native agent
+  component. Tests assert both halves: same Skills, not identical text.
+
+**Fixed a claim introduced in M3 slice 2.** `claude-md-block.md` said the block was "kept
+identical across both hosts" — written before the Codex block existed to contradict it,
+and false the moment invocation differed. Same shape as the manifest that called the
+Skills placeholders for two milestones: a user-facing wrong claim with every check green.
+
+Adapter prose is 18% of canonical Skill prose against the enforced 20% limit.
+
 ### Added — M4 slice 1: the optional Codex agent templates
 
 Six TOML templates at `adapters/codex/agent-templates/`, one per role, plus

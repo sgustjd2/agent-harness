@@ -49,6 +49,11 @@ are. Saying it in two places is the intended redundancy — the memory files say
 themselves, and this says it about them.
 
 **Size.** Comfortably inside the 2 KiB ceiling. The ceiling comes from Codex's
-concatenation budget rather than from anything Claude does, and the block is kept
-identical across both hosts on purpose: a user who works in both should not have to learn
-that the same block means two different things.
+concatenation budget rather than from anything Claude does; the block is held to it on
+both hosts so that a user working in both meets one block, not two.
+
+**Same structure, different prefix.** The Codex block in
+`../codex/agents-md-block.md` carries the same sections, the same paths and the same
+seven Skills — but invocation differs by host (`/agent-harness:<name>` here, `$<name>`
+there), so the two files are not interchangeable. A test asserts they name the same
+Skills, which is the part that must never diverge.
