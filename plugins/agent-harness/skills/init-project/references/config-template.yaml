@@ -11,7 +11,10 @@ schema_version: 1
 project:
   # Replace with the repository name.
   name: CHANGE_ME
-  # Detected types, conservative. Use [generic] when unsure.
+  # Detected types. Replace this value -- `generic` is the placeholder, not the default.
+  # Conservative means: do not claim a type whose signals are absent. It does NOT mean
+  # falling back to `generic` when the signals are right there. A pyproject.toml with a
+  # pytest section means `python`. Allowed: python, javascript, typescript, generic.
   type:
     - generic
 

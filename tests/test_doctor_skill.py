@@ -351,3 +351,29 @@ def test_implicit_invocation_is_enabled_for_a_read_only_diagnostic():
     assert set(policy) == {"policy"}
     assert set(policy["policy"]) == {"allow_implicit_invocation"}
     assert policy["policy"]["allow_implicit_invocation"] is True
+
+
+# ------------------------------------------------- D-03: not-applicable checks
+
+@pytest.mark.parametrize("rule", [
+    "a check whose **applies** condition in the diagnostic matrix is unmet is reported",
+    "`not applicable` is **not a fifth status**",
+    "**`not applicable` never affects the overall result**",
+    "**do not report it as `unknown`.**",
+    "**do not omit the section.**",
+])
+def test_not_applicable_is_defined(rule):
+    """D-03. Four statuses, a fixed report, and an Applies column with nothing joining them.
+
+    The first run anyone performs -- doctor on an uninitialized repo -- leaves three
+    sections with nothing in scope and, before this, no vocabulary to say so.
+    """
+    assert rule in _flat(SKILL_MD), f"SKILL.md omits: {rule!r}"
+
+
+def test_not_applicable_is_distinguished_from_unknown():
+    """The two are opposites: one knows why it is out of scope, the other knows nothing."""
+    body = _flat(SKILL_MD)
+    assert "`unknown` means the state could not be determined; here it is known precisely" \
+        in body
+    assert "the `applies` column is load-bearing" in _flat(MATRIX)
