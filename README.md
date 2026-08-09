@@ -10,7 +10,7 @@ accumulated evidence into reviewable proposals that apply only when you say so.
 
 ---
 
-## Status: M2 in progress — five production Skills, host verification still pending
+## Status: M2 in progress — six production Skills, host verification still pending
 
 **M2 implementation has begun.** M1 built the repository skeleton and the validation
 pipeline, and verified the packaging contract against real hosts. M2 adds the first
@@ -52,9 +52,16 @@ commands. It never declares the work complete; `verify-work`
 owns that. **Automatic run-state persistence remains deferred**: no `evidence.md` or
 `result.md` is written in this milestone.
 
+**`refine-harness` is the sixth production Skill.** It **analyzes run evidence** --
+`plan.md`, `evidence.md`, `result.md` from completed or failed runs -- and **writes one
+local proposal** at `.agent-harness/proposals/<id>.md`. **It does not apply it**: every
+item cites real evidence, conflicts are preserved rather than resolved, and the proposal
+stays at `status: proposed` until a human reviews it. **`apply-refinement` remains
+unimplemented**, so nothing applies proposals yet.
+
 **This is not a stable release.** Remaining M1 host verification is still a release
 blocker -- Codex Skill discovery, the ChatGPT Desktop surfaces, and the hook and
-helper-script runtime experiments are unfinished. Treat all five Skills as
+helper-script runtime experiments are unfinished. Treat all six Skills as
 experimental.
 
 | Milestone | Content | State |
@@ -66,16 +73,16 @@ experimental.
 | M1.3 / M1.3.1 | OpenAI marketplace contract remediation and evidence correction | done |
 | M1.4A | Claude non-interactive load and component discovery | done |
 | M1.4B | Codex Skill discovery, ChatGPT Desktop, hooks, helper execution | **not started** |
-| **M2** | **shared Skill bodies — `plan-work`, `init-project`, `verify-work`, `doctor`, `orchestrate`** | **in progress** |
+| **M2** | **shared Skill bodies — six of seven; `apply-refinement` remains** | **in progress** |
 | M3–M8 | adapters, state, refinement, pilot, release | not started |
 
 **Exit criteria: 14 of 17 met.** The three unmet criteria all need host access that this
 phase deliberately did not take — see [`docs/m1-traceability.md`](docs/m1-traceability.md).
 
-The installable plugin root contains the compatibility fixture and five production
-Skills: `plan-work`, `init-project`, `verify-work`, `doctor` and `orchestrate`. The other
-two -- `refine-harness` and `apply-refinement` -- are **not implemented**, and validation
-rejects their names until they are.
+The installable plugin root contains the compatibility fixture and six production
+Skills: `plan-work`, `init-project`, `verify-work`, `doctor`, `orchestrate` and
+`refine-harness`. Only `apply-refinement` remains **not implemented**, and validation
+rejects its name until it is.
 
 ---
 
@@ -95,6 +102,7 @@ plugins/agent-harness/                the installable plugin. Self-contained.
   skills/verify-work/                   production Skill, bounded execution
   skills/doctor/                        production Skill, read-only diagnostics
   skills/orchestrate/                   production Skill, plan-bounded delegation
+  skills/refine-harness/                production Skill, proposal-only
   core/schemas/                         five packaging schemas
   core/schemas/state/                   state schemas -- NOT packaging evidence
   adapters/{claude,codex}/              host integration + experiment records
@@ -195,9 +203,8 @@ it is deliberately narrower than a vendor contract, it says so in a `$comment`.
 `displayName`, descriptions and owner names are free-form labels. M1.3 removed the
 identifier patterns in error; M1.3.1 restored them.
 
-**M2 has five Skills so far.** `plan-work`, `init-project`, `verify-work`, `doctor` and
-`orchestrate` are implemented and validated; `refine-harness` and `apply-refinement` are
-not, and their names are still rejected in the installable root. A shipped `SKILL.md` is host-discoverable whatever
+**M2 has six Skills so far.** Only `apply-refinement` is left; its name is still
+rejected in the installable root. A shipped `SKILL.md` is host-discoverable whatever
 its body says, so an empty placeholder would be a product surface with nothing behind
 it.
 

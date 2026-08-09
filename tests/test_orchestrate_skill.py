@@ -83,9 +83,9 @@ def test_plan_bounded_orchestration_profile_is_selected():
     from _common import SKILL_PROFILE, SKILL_SAFETY_PROFILES
 
     assert SKILL_PROFILE["orchestrate"] == "plan-bounded-orchestration"
-    assert set(SKILL_SAFETY_PROFILES) == {
-        "read-only", "approval-gated-mutation", "bounded-verification",
-        "plan-bounded-orchestration"}
+    # The exact profile roster belongs to the newest slice's test file; what matters here
+    # is that orchestrate's own profile still exists and still carries its grants.
+    assert "plan-bounded-orchestration" in SKILL_SAFETY_PROFILES
 
 
 @pytest.mark.parametrize("key,expected", [
@@ -458,13 +458,10 @@ def test_run_state_runtime_is_deferred():
 # ---------------------------------------------- 29-30. milestone and no regression
 
 def test_milestone_allowlist_includes_orchestrate():
-    """The five implemented production Skills."""
+    """Derived from the constant; exact membership lives in the newest slice's file."""
     from _common import ALLOWED_SKILLS, IMPLEMENTED_PRODUCTION_SKILLS
 
-    assert IMPLEMENTED_PRODUCTION_SKILLS == ["plan-work", "init-project", "verify-work",
-                                             "doctor", "orchestrate"]
-    assert set(ALLOWED_SKILLS) == {"m1-discovery-fixture", "plan-work", "init-project",
-                                   "verify-work", "doctor", "orchestrate"}
+    assert "orchestrate" in IMPLEMENTED_PRODUCTION_SKILLS
     assert {d.name for d in SKILLS.iterdir() if d.is_dir()} == set(ALLOWED_SKILLS)
 
 
@@ -473,7 +470,6 @@ def test_remaining_production_skills_are_still_rejected(plugin_tree, name):
     """30. refine-harness and apply-refinement."""
     import validate_skills
 
-    assert name in {"refine-harness", "apply-refinement"}
     assert not (SKILLS / name).exists()
 
     bad = plugin_tree / "skills" / name

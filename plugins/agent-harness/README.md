@@ -14,6 +14,7 @@ skills/init-project/            production Skill (experimental), approval-gated
 skills/verify-work/             production Skill (experimental), bounded execution
 skills/doctor/                  production Skill (experimental), read-only diagnostics
 skills/orchestrate/             production Skill (experimental), plan-bounded delegation
+skills/refine-harness/          production Skill (experimental), proposal-only
 core/schemas/                   five packaging schemas
 core/schemas/state/             state schemas -- NOT packaging evidence
 adapters/claude/                Claude integration
@@ -34,9 +35,9 @@ workflow layer, two thin adapters.
 | `verify-work` | production | **experimental**, bounded command execution |
 | `doctor` | production | **experimental**, read-only harness diagnostics |
 | `orchestrate` | production | **experimental**, plan-bounded orchestration (no command execution) |
+| `refine-harness` | production | **experimental**, proposal-only refinement |
 
-**No other production Skill is implemented.** `refine-harness` and
-`apply-refinement` are planned, and
+**No other production Skill is implemented.** `apply-refinement` is planned, and
 `validate_skills.py` rejects any of those names appearing here until each is actually
 built. A shipped `SKILL.md` is host-discoverable whatever its body says, so a
 placeholder would be a product surface with nothing behind it.
@@ -71,8 +72,8 @@ repository.
 ## Constraints binding everything here
 
 - No file may reference a path outside this directory.
-- No *unimplemented* production Skill name (`refine-harness`, `apply-refinement`)
-  may appear as a directory here. The allowlist widens one
+- No *unimplemented* production Skill name (`apply-refinement`) may appear as a
+  directory here. The allowlist widens one
   Skill at a time, as each is implemented.
 - No `scripts/`, `assets/` or dependency manifest inside any Skill: Skills are
   instruction-only, so there is nothing to execute and nothing to install.
@@ -194,13 +195,45 @@ before the action, and without it the task is marked `blocked` while safe work c
 `verify-work` owns gate outcomes. Nothing is persisted in this milestone — no
 `evidence.md`, no `result.md`, no resume engine.
 
-### How the five production Skills are checked
+### `refine-harness`
+
+Reads the evidence a run actually produced and writes **one** proposal. Then stops.
+
+**Stage A of two, and it only does Stage A.** It proposes; it never applies. Nothing in
+memory, config, source or the plugin changes here — `apply-refinement` owns application,
+and does not exist yet.
+
+Every item must cite real evidence: at least one `evidence_refs[]` entry of the form
+`<run-id>#<evidence-id>` resolving to an evidence item that exists in one of the source
+runs. An assumption, a plan's intent, a result summary or generic best practice grounds
+nothing — `plan.md` and `result.md` give context, `evidence.md` gives grounding.
+
+Its write surface is **one directory, one new file**: `.agent-harness/proposals/`. That is
+deliberately narrower than `init-project`'s `.agent-harness/` root over the same tree —
+memory, config and run artifacts each keep their own approval path, and a duplicate fact
+produces a *proposal to update sources*, never an edit.
+
+Conflicts are preserved rather than resolved. Near duplicates and contradictions are
+marked `conflict: true` and handed to a human, because choosing a winner would delete the
+disagreement the reviewer needs.
+
+`skill` items are always `risk: high` and **human-PR-only** — the Skill never writes to
+`plugins/agent-harness/skills/**`, and `apply-refinement` must refuse self-modification
+when it is built.
+
+### How the six production Skills are checked
 
 All three declare an `agent-harness:policy` marker, but against **different safety
 profiles**: `plan-work` and `doctor` are `read-only`, `init-project` is
 `approval-gated-mutation`, `verify-work` is `bounded-verification`, `orchestrate` is
-`plan-bounded-orchestration`. One flattened table would let a Skill that writes files
-claim it does not.
+`plan-bounded-orchestration`, `refine-harness` is `proposal-only-mutation`. One flattened
+table would let a Skill that writes files claim it does not.
+
+`refine-harness` needed its own profile rather than reusing `approval-gated-mutation`:
+that profile requires mutation approval tied to an **already-shown proposal**, and this
+Skill is what produces one. Reusing it would have been circular — the artifact would have
+to exist before it could be authorized to exist. Explicit invocation authorizes *creating*
+the proposal; applying it is a separate gate, one stage later.
 
 Execution and delegation are granted **separately**, both as explicit lists. Exactly one
 profile may run commands (`bounded-verification`) and exactly one may spawn agents

@@ -71,6 +71,9 @@ REQUIRED_REFERENCES = {
     "orchestrate": ["references/orchestration-contract.md",
                     "references/handoff-contract.md",
                     "references/conflict-policy.md"],
+    "refine-harness": ["references/proposal-contract.md",
+                       "references/evidence-and-dedup.md",
+                       "references/proposal-template.md"],
 }
 
 # Never inside a Skill: these slices are instruction-only, so there is nothing to

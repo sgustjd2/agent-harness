@@ -1,0 +1,17 @@
+# Invocation policy for refine-harness.
+#
+# Implicit invocation is DISABLED. This Skill writes a file. The file is local-only and
+# applies nothing, so the risk is modest -- but a Skill that creates artifacts should
+# start because someone asked for it, not because a model judged it relevant nearby.
+# Conservative, given the choice.
+#
+# This is a host-level INVOCATION gate and nothing more. It does not create a
+# proposal-approval gate: explicit invocation is sufficient to generate a proposal, and
+# generating one is never permission to apply it. Application approval belongs to
+# apply-refinement, which does not exist yet.
+#
+# Only the documented policy field is set. No tool grants, connectors, dependencies,
+# network permissions, or agent declarations belong here.
+
+policy:
+  allow_implicit_invocation: false
