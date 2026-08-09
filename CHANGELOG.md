@@ -5,6 +5,28 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added — M4 slice 3: Codex install guide and template reporting
+
+- **`docs/install-codex.md` is written**, with the same status table the Claude guide
+  uses. Less has been observed here: marketplace registration and the
+  registration-is-not-installation distinction are host-confirmed, ChatGPT desktop
+  installation is documented and unexercised, and **Skill discovery is still Not Run
+  (E6)**. The guide says so where a reader would otherwise blame themselves — if `$doctor`
+  does not resolve, that is the open question showing itself.
+- **The manual template copy is documented end to end** — project scope by default,
+  a read-it-first step, and removal. The pre-copy check matters because the build-time
+  validator runs where the file was *written*, not where it came from; a template from a
+  fork needs the reader's own eyes.
+- **`doctor` gained `info`, and it is not a fifth status.** D-03 established that the four
+  statuses each describe an outcome of judging something. `not applicable` says the check
+  was never in scope; `info` says it was in scope, was observed, and judging it is not
+  this Skill's call. Both stay out of the overall result for the same reason.
+- Reporting an installed role template as `ok` would have been the easy option and the
+  wrong one: `ok` reads as endorsement, and a user who installed a template that widens a
+  role would have seen this Skill approve of it. `doctor` also **never** reads
+  `~/.codex/agents/` — user scope, outside the repository, and not the project's to
+  inspect.
+
 ### Added — M4 slice 2: the Codex adapter layer
 
 `capability-notes.md` and `agents-md-block.md` were placeholders saying they would be

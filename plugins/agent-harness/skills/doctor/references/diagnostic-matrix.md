@@ -5,6 +5,10 @@ cannot apply to the current project are reported as not applicable, not as failu
 
 `unknown` is a real answer everywhere in this table. It is never upgraded to `fail`.
 
+A few rows report **`info`** instead of a status. Those checks were in scope and were
+observed; what they found is not this Skill's to rule on. Like *not applicable*, `info`
+never affects the overall result — see the *Host agent templates* section.
+
 **The `Applies` column is load-bearing.** When its condition is unmet the check is reported
 **`not applicable`** with the reason, which is a statement about scope rather than one of
 the four outcome statuses — and it never affects the overall result. Before
@@ -46,6 +50,25 @@ directory in the installable root.
 | SKL-03 | Canonical frontmatter fields only | per Skill | only allowed keys | — | disallowed key present | unparseable |
 | SKL-04 | Referenced files exist inside the Skill root | per Skill | all present and contained | — | missing or escaping the root | unreadable |
 | SKL-05 | `agents/openai.yaml` parses | when present | parses | — | malformed | unreadable |
+
+## Host agent templates
+
+| ID | Diagnostic | Applies | Reported as |
+| :--- | :--- | :--- | :--- |
+| TPL-01 | Codex role templates in `.codex/agents/` | repository readable | **`info`** — which of the six are present, or none |
+| TPL-02 | Codex role templates in `~/.codex/agents/` | **never checked** | — |
+
+**This table has no `ok`/`warn`/`fail` columns, and that is the point.** Installing a role
+template is a choice about what the user's agents may do. Present and absent are both
+correct, so there is nothing to judge and `info` reports the observation instead.
+
+`ok` would be wrong in a way that matters: it reads as endorsement, and a user who
+installed a template that widens a role would see this Skill approve of it.
+
+**TPL-02 is never checked**, which is also deliberate. `~/.codex/agents/` is user scope,
+outside the repository, and reading it would mean this Skill inspects state the project
+does not own — for a check whose only output is a fact the user already knows. Nothing in
+this product writes there and nothing here reads there.
 
 ## Project state
 

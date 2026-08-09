@@ -79,6 +79,28 @@ was nothing to judge; the four statuses all describe an outcome of judging somet
 This is the common case on a first run: before `init-project`, the Configuration, Memory
 and Verification-executable sections have nothing in scope.
 
+### Observations that are not judgements
+
+A few checks exist to **report a fact, not to rule on it**. Those are marked `info`.
+
+`info` follows the same logic as `not applicable`, applied one step later. The four
+statuses each describe an outcome of judging something; `not applicable` says the check
+was never in scope; **`info` says it was in scope, it was observed, and judging it is not
+this Skill's call.**
+
+- **`info` never affects the overall result**, for the same reason `not applicable` does
+  not: no judgement was made.
+- **Do not report an `info` observation as `ok`.** `ok` says *I checked this and it is
+  fine*, and a reader takes it as endorsement. Reporting an optional host agent template
+  as `ok` would say this Skill approved of it being installed, which it did not.
+- **Do not report it as `warn` either.** Nothing is wrong.
+- Say what was found, plainly: *"info: 2 role templates present in `.codex/agents/` —
+  researcher, reviewer"*, or *"info: none present"*.
+
+The optional Codex role templates are the case this exists for. Whether installing one is
+a good idea depends on what the user wants their agents to be allowed to do, and that is
+theirs to decide.
+
 ## Findings
 
 Every **`fail`** carries: finding ID, concise reason, affected path or component,
@@ -241,6 +263,23 @@ When both files carry a managed block, compare the block contents. A mismatch me
 two hosts are being told different things, which is the drift the parity requirement
 exists to catch — report it. **Never repair either file.**
 
+### Host agent templates
+
+Look in `.codex/agents/` for the six optional Codex role templates — coordinator,
+researcher, implementer, reviewer, tester, refiner — and report which are present as
+**`info`**. None present is equally correct and reported the same way.
+
+**Report, never judge.** Whether a role template belongs in a project is a decision about
+what the user's agents may do, and it is theirs. `ok` would read as approval of a choice
+this Skill never evaluated.
+
+**Never look in `~/.codex/agents/`.** That is user scope, outside the repository, and
+reading it would mean inspecting state the project does not own to report a fact the user
+already knows. Nothing in this product writes there; nothing here reads there.
+
+If a file in `.codex/agents/` is not one of the six, say so as part of the same
+observation and leave it alone. It is not this plugin's file.
+
 ### Compatibility (informational)
 
 **`AGENTS.md` size.** Codex concatenates `AGENTS.md` from the Git root down against a
@@ -276,7 +315,8 @@ Then: **Environment**, **Plugin installation**, **Skill integrity**, **Project s
 
 Each finding carries ID, Check, Status, Expected, Observed, Impact, Remediation, and
 Remediation command (argv or none). The summary counts `ok`, `warn`, `fail` and `unknown`,
-and lists `not applicable` separately — it is a scope statement, not an outcome.
+and lists `not applicable` and `info` separately — neither is an outcome. One says the
+check was out of scope; the other says it was observed and not judged.
 
 Overall is computed in this order:
 
