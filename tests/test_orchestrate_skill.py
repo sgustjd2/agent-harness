@@ -356,16 +356,21 @@ def test_agent_teams_is_not_a_dependency():
     assert "**agent teams is not a dependency.**" in _flat(CONTRACT)
 
 
-def test_no_production_agent_definitions_or_bundled_helper():
-    """18/28. No host-specific agents, no runtime helper, no state engine."""
+def test_no_bundled_helper_or_state_runtime():
+    """18/28. No runtime helper and no state engine bundled with the Skill.
+
+    Originally this also asserted that no plugin-root `agents/` directory existed. M3
+    wrote the six role subagents, so that clause moved to test_claude_agents.py, where
+    it became a check that they are correct rather than absent. What stays here is the
+    part that is still true: orchestrate delegates to roles the host provides and
+    bundles no executable of its own.
+    """
     import validate_skills
 
     for sub in ("scripts", "assets", "bin"):
         assert not (ORCH / sub).exists(), f"{sub}/ must not exist inside orchestrate"
     for manifest in validate_skills.DEPENDENCY_MANIFESTS:
         assert not (ORCH / manifest).exists()
-    # No plugin-root agents/ directory, and no run-state runtime modules.
-    assert not (REPO_ROOT / "plugins/agent-harness/agents").exists()
     assert not (REPO_ROOT / "scripts/ah.py").exists()
     assert not (REPO_ROOT / "scripts/lib").exists()
 

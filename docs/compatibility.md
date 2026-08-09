@@ -236,11 +236,36 @@ elevation. The check itself is platform-neutral and runs on CI.
 | Q-IMPL-002 | Does Codex ignore or reject unknown `SKILL.md` frontmatter keys? | no — the minimum set is safe either way |
 | Q-IMPL-003 (Skill half) | How does a canonical Skill locate bundled scripts? | no — helper execution deferred until answered |
 | Q-IMPL-004 | Codex private-repository authentication | no |
+| Q-IMPL-007 | Does the subagent `tools` allowlist enforce read-only for researcher/reviewer? | no — **half answered in M3**, see below |
 | Q-IMPL-009 | Is there an official Codex validator? | no — local schemas documented in §2 |
 | Q-IMPL-010 | Approval interaction model and non-replayable representation | no for M2, **yes before M6** |
 | Q-IMPL-011 | Can the Codex CLI alone install a plugin? | no — fallback documented |
 | DEC-P13 | Is manifest co-location viable? | **needs a Codex host** |
 | DEC-P14 | Which marketplace candidate? | **needs host surfaces** |
+
+### Q-IMPL-007 — expressiveness answered, enforcement still open
+
+The question splits into two, and only one of them ever needed a host.
+
+**Can the allowlist express the restriction?** Answered in M3, by construction. The
+subagent frontmatter selects **tools**. It has no syntax for a path scope or a command
+class. So a role whose every restriction is "which tool" is fully expressible, and a
+role with any "which path" or "which command" restriction is not.
+
+That divides the six roles exactly where Q-IMPL-007 pointed. `researcher` and `reviewer`
+hold no write tool and no shell, so nothing about them is left to prose. The other four
+hold `Write` or `Bash`, and their scope limits — assigned files, configured gates,
+`.agent-harness/` only — are prose in the body and nowhere else. Each of those four says
+so in its own text; `validate_agents.py` rejects one that claims otherwise.
+
+**Does the host actually refuse a tool outside the list?** Still open. That is a
+property of Claude Code, not of these files, and settling it needs the write-attempt
+test the PRD describes — a host session, the same blocker as E6, E12 and E13.
+
+So the fallback the PRD names (demote to an instruction-level constraint) is **not**
+taken: the constraint is tool-level as designed, and what remains unverified is the
+host's enforcement of it. Recording those as the same thing would overstate one and
+understate the other.
 
 
 ---
