@@ -40,8 +40,9 @@ max_parallel_from_config: true
 auto_merge_conflicts: false
 network_access: false
 modifies_user_settings: false
-evidence_persistence: response-only
-run_state_runtime: deferred
+evidence_persistence: run-artifacts
+writes_run_artifacts: true
+run_state_runtime: active
 -->
 
 This is the widest write authority in the product, and the bounding fields are what make
@@ -210,9 +211,24 @@ reported `blocked` or `failed` instead.
 `recommended_next_action: verify-work` — but **do not call it automatically**. If blockers
 remain, recommend resolving those first.
 
-**No run-state runtime in this milestone.** Nothing is persisted: no `evidence.md`, no
-`result.md`, no queue, no resume engine. Evidence comes back in the response. An existing
-`plan.md` may be read, and real source changes from the work itself are expected.
+### Run artifacts
+
+Write `.agent-harness/runs/<run-id>/evidence.md` as work completes, and
+`.agent-harness/runs/<run-id>/result.md` once, at the end, in **every** terminal state.
+
+Evidence is **append-only**: one item per delegation, per task outcome, per degradation.
+Never edit or delete an item; a correction is a new item. `result.md` is written once and
+not revised — a re-run is a new run id, not an edit of this one.
+
+The run directory is a write this Skill makes regardless of what the plan says, and it is
+the only one outside the plan's declared paths.
+
+**Still no queue and no resume engine.** Those are separate machinery, and writing down
+what happened does not require them.
+
+If `.agent-harness/` does not exist, report the work in the response, say the artifacts
+could not be persisted, and name `init-project`. Do not create the directory — that is an
+approval-gated act belonging to another Skill.
 
 ## Report
 

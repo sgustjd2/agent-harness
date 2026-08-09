@@ -451,17 +451,19 @@ def test_existing_skills_keep_their_profiles(skill, profile):
 
 # ---------------------------------------- D-01: the pipeline prerequisite
 
-def test_prerequisite_names_the_missing_producer():
-    """D-01. refine-harness reads artifacts no current Skill writes.
+def test_the_prerequisite_names_its_producers_and_its_history():
+    """D-01, closed.
 
     Each deferral was defensible alone; nothing checked their composition, because every
-    Skill is validated in isolation. The contract must say so rather than leaving the
-    Skill to look broken when it is behaving correctly.
+    Skill is validated in isolation. The Skill still states what it depends on -- naming
+    the producers is what makes the dependency visible when one of them stops running --
+    and it keeps the record of having been unreachable, because that is the lesson.
     """
     body = _flat(SKILL_MD)
     assert "reads run artifacts it does not create" in body
-    assert "run-state runtime" in body and "deferred to a later milestone" in body
-    assert "no source runs to refine" in body
+    assert "`orchestrate` and `verify-work` write them" in body
+    assert "d-01" in body
+    assert "m5 turned persistence on" in body
 
 
 @pytest.mark.parametrize("workaround", [
@@ -474,13 +476,31 @@ def test_prerequisite_forbids_working_around_the_gap(workaround):
     assert workaround in _flat(SKILL_MD), f"SKILL.md omits: {workaround!r}"
 
 
-def test_no_current_skill_persists_run_artifacts():
-    """The fact D-01 rests on, asserted so a future change has to notice it."""
-    from _common import extract_policy_marker
+def test_the_producers_now_persist_run_artifacts():
+    """D-01 is closed. This test is the guard that noticed when it was.
+
+    Its previous form asserted the opposite — that neither producer persisted anything —
+    with a message telling whoever changed that to update this Skill's prerequisite note.
+    M5 changed it, this failed, and the note was updated. That is the test working, not
+    the test being wrong.
+    """
+    from _common import PROFILES_WRITING_RUN_ARTIFACTS, extract_policy_marker
 
     for producer in ("orchestrate", "verify-work"):
         declared = yaml.safe_load(extract_policy_marker(
             (SKILLS / producer / "SKILL.md").read_text(encoding="utf-8")))
-        assert declared["evidence_persistence"] == "response-only", (
-            f"{producer} now persists evidence — refine-harness's prerequisite note "
-            "in SKILL.md must be updated to match")
+        assert declared["evidence_persistence"] == "run-artifacts"
+        assert declared["writes_run_artifacts"] is True
+    assert sorted(PROFILES_WRITING_RUN_ARTIFACTS) == [
+        "bounded-verification", "plan-bounded-orchestration"]
+
+
+def test_a_missing_artifact_is_still_an_ordinary_answer():
+    """Now that the file usually exists, its absence reads as an accident.
+
+    That makes reconstructing evidence *more* tempting than it was when nothing persisted,
+    so the prohibition is restated rather than dropped as solved.
+    """
+    body = _flat(SKILL_MD)
+    assert "a missing artifact is still an ordinary answer" in body
+    assert "more* tempting now that the file usually exists" in body

@@ -379,7 +379,17 @@ SKILL_SAFETY_PROFILES = {
         "modifies_user_settings": False,
         "command_definition": "argv-array",
         "verification_default": "Not Run",
-        "evidence_persistence": "response-only",
+        # M5: evidence is written, not just returned. The write surface is the run's own
+        # directory under .agent-harness/runs/, which the harness owns and gitignores by
+        # default -- so this widening adds no tracked state and no path the user did not
+        # already agree to when they initialized the project.
+        #
+        # It needs no separate approval. Execution approval covers the record the
+        # execution produces; a verifier that ran the gates but could not write down what
+        # happened would be asking the user to take its word for it, which is the thing
+        # evidence exists to avoid. Approval still does not extend one path further.
+        "evidence_persistence": "run-artifacts",
+        "writes_run_artifacts": True,
     },
     # Applies ONE already-approved proposal, then verifies, then records how to undo it.
     #
@@ -476,8 +486,9 @@ SKILL_SAFETY_PROFILES = {
         "max_parallel_from_config": True,
         "auto_merge_conflicts": False,
         "modifies_user_settings": False,
-        "evidence_persistence": "response-only",
-        "run_state_runtime": "deferred",
+        "evidence_persistence": "run-artifacts",
+        "writes_run_artifacts": True,
+        "run_state_runtime": "active",
     },
 }
 
@@ -508,7 +519,18 @@ PROFILES_PERMITTING_AGENT_SPAWN = ["plan-bounded-orchestration"]
 # these roots is a path the user never agreed to.
 PROFILES_REQUIRING_PATH_ROOTS = ["approval-gated-mutation",
                                  "proposal-only-mutation",
-                                 "approved-proposal-application"]
+                                 "approved-proposal-application",
+                                 "bounded-verification"]
+
+# Where run artifacts go. Declared once so the Skills, the validator and the state-model
+# document cannot disagree about it.
+RUN_ARTIFACT_ROOT = ".agent-harness/runs/"
+
+# Profiles that write run artifacts. `plan-bounded-orchestration` is deliberately NOT in
+# PROFILES_REQUIRING_PATH_ROOTS above: its write surface is defined by the plan, so it
+# cannot be enumerated in advance. It still declares this root, because the run directory
+# is a write it makes regardless of what any plan says.
+PROFILES_WRITING_RUN_ARTIFACTS = ["bounded-verification", "plan-bounded-orchestration"]
 ALLOWED_WRITE_PATH_ROOTS = {
     "init-project": [".agent-harness/", "CLAUDE.md", "AGENTS.md"],
     # One directory, and only ever one new file inside it. Note this is NARROWER than
@@ -519,6 +541,9 @@ ALLOWED_WRITE_PATH_ROOTS = {
     # Whatever a proposal target_path names, bounded to these roots.
     # plugins/** is absent on purpose: the plugin never rewrites itself.
     "apply-refinement": [".agent-harness/", "CLAUDE.md", "AGENTS.md"],
+    # The run's own directory and nothing else. Narrower than init-project's
+    # `.agent-harness/`: a verifier has no business touching config or memory.
+    "verify-work": [RUN_ARTIFACT_ROOT],
 }
 
 # Roots a Skill may never declare: user scope is out of bounds (SEC-17), and so is

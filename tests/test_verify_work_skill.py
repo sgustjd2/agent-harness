@@ -106,7 +106,8 @@ def test_bounded_verification_profile_is_selected():
     ("modifies_config", False),
     ("modifies_user_settings", False),
     ("spawns_agents", False),
-    ("evidence_persistence", "response-only"),
+    ("evidence_persistence", "run-artifacts"),
+    ("writes_run_artifacts", True),
 ])
 def test_declared_contract(key, expected):
     assert _declared()[key] == expected
@@ -134,13 +135,39 @@ def test_flipping_a_bounded_promise_fails_validation(plugin_tree, key, bad):
     assert "SKILL_MUTATION_NOT_PERMITTED" in codes, codes
 
 
-def test_verify_work_has_no_write_surface():
-    """`read_only: false` is about subprocesses, not about editing anything."""
-    from _common import ALLOWED_WRITE_PATH_ROOTS, PROFILES_REQUIRING_PATH_ROOTS
+def test_verify_works_write_surface_is_one_run_directory():
+    """M5 gave it a write surface. It is exactly one directory and no more.
 
-    assert "bounded-verification" not in PROFILES_REQUIRING_PATH_ROOTS
-    assert "verify-work" not in ALLOWED_WRITE_PATH_ROOTS
-    assert "allowed_path_roots" not in _declared()
+    Before M5 this asserted there was none at all. The narrower claim that replaced it is
+    the one that matters: a verifier has no business touching config or memory, so this
+    root is deliberately narrower than init-project's `.agent-harness/`.
+    """
+    from _common import (ALLOWED_WRITE_PATH_ROOTS, PROFILES_REQUIRING_PATH_ROOTS,
+                         RUN_ARTIFACT_ROOT)
+
+    assert "bounded-verification" in PROFILES_REQUIRING_PATH_ROOTS
+    assert ALLOWED_WRITE_PATH_ROOTS["verify-work"] == [RUN_ARTIFACT_ROOT]
+    assert _declared()["allowed_path_roots"] == [RUN_ARTIFACT_ROOT]
+    assert _declared()["modifies_source"] is False
+    assert _declared()["modifies_config"] is False
+
+
+def test_the_evidence_write_needs_no_separate_approval():
+    """Execution approval covers the record the execution produces.
+
+    A verifier that ran the gates but could not write down what happened would be asking
+    the user to take its word for it -- which is what evidence exists to prevent.
+    """
+    body = _body()
+    assert "needs no separate approval, and grants nothing further" in body
+    assert "does not extend one path beyond" in body
+
+
+def test_an_uninitialized_project_still_gets_its_results():
+    """Verification you can read beats verification that refused over paperwork."""
+    body = _body()
+    assert "do not create `.agent-harness/` to hold the file" in body
+    assert "could not be persisted" in body
 
 
 # ------------------------------------------------- 9-11. gate config contract

@@ -54,19 +54,23 @@ gate sits one stage later, on application, where the change actually happens.
 ## Prerequisite — persisted run artifacts
 
 **This Skill reads run artifacts it does not create.** It needs `evidence.md` and
-`result.md` to exist on disk, and those are written by the **run-state runtime**, which is
-deferred to a later milestone.
+`result.md` on disk, under `.agent-harness/runs/<run-id>/`.
 
-Until that runtime lands, `orchestrate` and `verify-work` both return evidence **in the
-response only** and persist nothing. So in a project running the current milestone there
-are usually **no source runs to refine**, and the correct output is the one below: **no
-proposal**, naming the missing artifact.
+`orchestrate` and `verify-work` write them. That was not true through M4 — both returned
+evidence in the response and persisted nothing, which left this Skill and
+`apply-refinement` with no reachable input at all (dry-run finding **D-01**). M5 turned
+persistence on, and this is the Skill that was waiting for it.
 
-That is expected, not a malfunction. **Do not work around it** — do not accept a
-conversation transcript in place of `evidence.md`, do not reconstruct evidence from a
-response, and do not relax the evidence-reference requirement to produce something. A
-proposal whose items cite evidence that was never written down is exactly the unauditable
-artifact the evidence rule exists to prevent.
+**A missing artifact is still an ordinary answer**, not a malfunction: a project with no
+completed runs, or one where verification ran before `init-project`, simply has nothing to
+refine. Report **no proposal** and name what is missing.
+
+**Do not work around it.** Do not accept a conversation transcript in place of
+`evidence.md`, do not reconstruct evidence from a response, and do not relax the
+evidence-reference requirement to produce something. A proposal citing evidence that was
+never written down is exactly the unauditable artifact the evidence rule exists to
+prevent — and it is *more* tempting now that the file usually exists, because its absence
+looks like an accident rather than the norm.
 
 ## Input
 

@@ -105,8 +105,9 @@ def test_plan_bounded_orchestration_profile_is_selected():
     ("requires_explicit_invocation", True),
     ("network_access", False),
     ("modifies_user_settings", False),
-    ("evidence_persistence", "response-only"),     # 26
-    ("run_state_runtime", "deferred"),             # 27
+    ("evidence_persistence", "run-artifacts"),     # 26
+    ("run_state_runtime", "active"),               # 27
+    ("writes_run_artifacts", True),
 ])
 def test_declared_contract(key, expected):
     assert _declared()[key] == expected
@@ -454,11 +455,30 @@ def test_verify_work_remains_the_verification_owner():
     assert "do not call it automatically" in body
 
 
-def test_run_state_runtime_is_deferred():
-    """26/27."""
+def test_run_artifacts_are_written_and_append_only():
+    """26/27. M5 turned this on; it was deferred through M2-M4.
+
+    The deferral is what made two of seven Skills unreachable (dry-run D-01), so the
+    replacement assertions pin the properties that make the artifacts trustworthy rather
+    than merely present: append-only evidence, a result in every terminal state.
+    """
     body = _flat(SKILL_MD)
-    assert "no run-state runtime in this milestone" in body
-    assert "no `evidence.md`, no `result.md`, no queue, no resume engine" in body
+    assert ".agent-harness/runs/<run-id>/evidence.md" in body
+    assert "append-only" in body
+    assert "never edit or delete an item" in body
+    assert "in **every** terminal state" in body
+
+
+def test_the_queue_and_resume_engine_are_still_deferred():
+    """Writing down what happened does not require run lifecycle machinery."""
+    assert "still no queue and no resume engine" in _flat(SKILL_MD)
+
+
+def test_orchestrate_does_not_create_the_harness_directory():
+    """Initialization is approval-gated and belongs to another Skill."""
+    body = _flat(SKILL_MD)
+    assert "do not create the directory" in body
+    assert "init-project" in body
 
 
 # ---------------------------------------------- 29-30. milestone and no regression
