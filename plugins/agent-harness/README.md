@@ -223,7 +223,7 @@ when it is built.
 
 ### How the six production Skills are checked
 
-All three declare an `agent-harness:policy` marker, but against **different safety
+All six declare an `agent-harness:policy` marker, but against **different safety
 profiles**: `plan-work` and `doctor` are `read-only`, `init-project` is
 `approval-gated-mutation`, `verify-work` is `bounded-verification`, `orchestrate` is
 `plan-bounded-orchestration`, `refine-harness` is `proposal-only-mutation`. One flattened
