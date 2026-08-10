@@ -1,44 +1,76 @@
 # agent-harness project configuration
-# Schema: plugins/agent-harness/core/schemas/config.schema.json
+# Schema: plugins/agent-harness/core/schemas/state/config.schema.json
 #
 # Gates are argv arrays, never shell strings (SEC-08). Nothing here is executed
 # without the user having put it here first (FR-010).
 
 schema_version: 1
+
 project:
   name: example-typescript-web
   type:
     - typescript
+
 vcs: git
+
 orchestration:
   max_parallel_agents: 3
   max_delegation_depth: 1
+
 verification:
+  run_budget_seconds: 2400
+
   gates:
-    - id: js-test
-      kind: test
-      command:
-        - npm
-        - run
-        - test
-      required: true
-      timeout_seconds: 900
+    # Project-local binaries, for the same reason the Python example names its
+    # interpreter: `npx` will fetch and run something that is not installed
+    # locally, which turns a verification gate into a download.
     - id: ts-typecheck
       kind: typecheck
       command:
-        - npx
-        - tsc
+        - node_modules/.bin/tsc
         - --noEmit
       required: true
       timeout_seconds: 600
+
     - id: js-lint
       kind: lint
       command:
-        - npm
-        - run
-        - lint
+        - node_modules/.bin/eslint
+        - .
       required: true
       timeout_seconds: 300
+
+    - id: js-test
+      kind: test
+      command:
+        - node_modules/.bin/vitest
+        - run
+      required: true
+      timeout_seconds: 900
+
+    # `flaky_policy: rerun-once` -- the only retry this product performs.
+    #
+    # Browser tests fail intermittently for reasons unrelated to the change. One
+    # rerun distinguishes that from a real failure. A gate that passes on the
+    # rerun is classified `flaky`, NOT `pass`: the difference is the whole point,
+    # and rerunning until green would hide exactly what needs looking at.
+    #
+    # Only for gates that are genuinely nondeterministic. Applied everywhere, it
+    # becomes a way to make failures go away.
+    - id: e2e
+      kind: test
+      command:
+        - node_modules/.bin/playwright
+        - test
+      required: true
+      timeout_seconds: 1800
+      flaky_policy: rerun-once
+      # Relative to the repository root, and it must stay inside it.
+      working_dir: e2e
+
+memory:
+  retention: unlimited
+
 runs:
   retention_count: 20
   auto_prune: false

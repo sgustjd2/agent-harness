@@ -1,48 +1,74 @@
 # agent-harness project configuration
-# Schema: plugins/agent-harness/core/schemas/config.schema.json
+# Schema: plugins/agent-harness/core/schemas/state/config.schema.json
 #
 # Gates are argv arrays, never shell strings (SEC-08). Nothing here is executed
 # without the user having put it here first (FR-010).
 
 schema_version: 1
+
 project:
   name: example-python-service
   type:
     - python
+
 vcs: git
+
 orchestration:
   max_parallel_agents: 3
   max_delegation_depth: 1
+
 verification:
+  # An upper bound on the whole gate set, independent of the per-gate timeouts.
+  run_budget_seconds: 1800
+
   gates:
+    # NOTE THE INTERPRETER PATH. It is the point of this example.
+    #
+    # `python -m pytest` looks obvious and is the one command a contract dry-run
+    # caught misbehaving. A bare name is resolved by PATH when the gate runs, which
+    # may not be the interpreter the project's packages are installed in -- and on
+    # Windows it is frequently an app-execution stub that runs nothing and exits
+    # non-zero. The gate then reports failure while the tests pass, and no
+    # verification status can tell that apart from a real failure: the process
+    # genuinely ran and genuinely exited non-zero.
+    #
+    # So name the interpreter this project owns.
     - id: py-test
       kind: test
       command:
-        - python
+        - .venv/bin/python
         - -m
         - pytest
         - -q
       required: true
       timeout_seconds: 600
+
     - id: py-lint
       kind: lint
       command:
-        - python
+        - .venv/bin/python
         - -m
         - ruff
         - check
         - .
       required: true
       timeout_seconds: 300
+
+    # `required: false` -- a failure is recorded in evidence but does not block
+    # completion. Useful while a check is being adopted.
     - id: py-typecheck
       kind: typecheck
       command:
-        - python
+        - .venv/bin/python
         - -m
         - mypy
         - .
       required: false
       timeout_seconds: 600
+
+memory:
+  retention: unlimited
+
 runs:
   retention_count: 20
   auto_prune: false
