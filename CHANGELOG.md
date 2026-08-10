@@ -5,6 +5,31 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed — M5 slice 4: the example configurations, and the claim about them
+
+**The examples were never validated.** Every README said its config was *"validated
+against `config.schema.json` in CI, so it cannot drift from the schema"* — and no test and
+no script referenced `examples/` at all. A claim *about* being tested is the worst kind to
+leave unbacked, because it is the sentence a reader uses to decide not to check. Twenty-
+eight tests now make it true.
+
+- **The D-02 remnant is gone.** All three examples shipped bare interpreter names —
+  `python -m pytest`, `npx tsc` — the exact shape a contract dry-run caught reporting
+  failure on passing tests. `init-project`, its template and `doctor` were all fixed when
+  D-02 was found; **the examples were not**, and an example is the one place a wrong
+  command gets copied into somebody's project on purpose. Now `.venv/bin/python` and
+  `node_modules/.bin/tsc`, with a guard that rejects a bare name in any example gate.
+- **The platform cost is named rather than hidden.** `.venv/bin/python` is POSIX;
+  Windows needs `.venv/Scripts/python.exe`. `config.yaml` is committed and shared, so a
+  mixed-platform team cannot write one path that works for everyone. There is no fix in
+  the file, and saying so beats a config that silently works only for whoever wrote it.
+- **The schema path comment was wrong for four milestones** — `core/schemas/` rather than
+  `core/schemas/state/`.
+- Each example now teaches one thing instead of repeating the same five lines: the
+  interpreter rule, `flaky_policy: rerun-once` and why a rerun pass is classified `flaky`
+  rather than `pass`, and why shipping **no gates** is a real configuration whose answer
+  is `unverified` — not `passed`, not `failed`.
+
 ### Changed — M5 slice 1: run artifacts are written, and D-01 is closed
 
 `orchestrate` and `verify-work` now write `.agent-harness/runs/<run-id>/evidence.md` and

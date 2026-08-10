@@ -1,23 +1,58 @@
 # agent-harness project configuration
-# Schema: plugins/agent-harness/core/schemas/config.schema.json
+# Schema: plugins/agent-harness/core/schemas/state/config.schema.json
 #
 # Gates are argv arrays, never shell strings (SEC-08). Nothing here is executed
 # without the user having put it here first (FR-010).
 
-# No gates are configured. verify-work will report `unverified` until the user adds
-# gates -- it never guesses commands (FR-010).
 schema_version: 1
+
 project:
   name: example-generic-repo
+  # `generic` is a placeholder, not a fallback. It belongs here only when nothing
+  # identifies the project -- not when the signals are present and unread.
   type:
     - generic
+
 vcs: git
+
 orchestration:
   max_parallel_agents: 3
   max_delegation_depth: 1
+
 verification:
+  # NO GATES, DELIBERATELY. This is a valid configuration, not an incomplete one.
+  #
+  # `verify-work` reports `unverified` and stops. It does not guess a command from
+  # what it finds in the repository, because a guessed command is one nobody
+  # approved, and running it would be the side effect the approval gate exists to
+  # prevent (FR-010).
+  #
+  # `unverified` is not `passed` and not `failed`. It means nothing was checked --
+  # which is true, and more useful than a green tick from a check invented on the
+  # spot.
   gates:
+
+memory:
+  retention: unlimited
+
+# Project-specific redaction, applied before anything is written to evidence,
+# results, proposals or memory.
+#
+# The built-in patterns cover credential shapes that look the same everywhere:
+# known token prefixes, private key headers, connection strings, home paths. They
+# cannot know that THIS project's internal hostnames or customer identifiers are
+# sensitive. That is what this list is for.
+#
+# Redaction is fail-closed: an uncertain value is replaced, not stored and
+# reviewed later. By review time the file already exists.
+redaction:
+  extra_patterns:
+    - "acme-internal-[a-z0-9-]+\\.example\\.invalid"
+    - "CUST-[0-9]{6,}"
+
 runs:
   retention_count: 20
   auto_prune: false
+  # `true` would un-ignore runs/ and commit raw evidence. doctor reports that as a
+  # `warn`, because redaction reduces the leakage risk rather than removing it.
   commit_evidence: false
