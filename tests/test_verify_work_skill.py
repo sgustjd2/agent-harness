@@ -297,8 +297,68 @@ def test_flaky_rules_are_stated(rule):
 def test_budget_exhaustion_is_skipped_not_not_run():
     """6. Gates the run reached and passed over are `skipped`, not 'never started'."""
     body = _body()
-    assert "every remaining gate is classified **`skipped`**" in body
+    assert "every remaining gate is `skipped` with the reason recorded" in body
     assert "`verification_status` becomes `unverified`" in body
+
+
+def test_a_budget_exhausted_run_is_never_passed():
+    """Even when every gate that ran passed. Some required gate did not run."""
+    assert "a budget-exhausted run is never `passed`" in _body()
+
+
+def test_a_gate_that_cannot_finish_is_not_started():
+    """Starting it spends the remainder and misattributes the cause.
+
+    The resulting `timeout` says *this gate is slow* when the truth is *this run ran out
+    of time* -- two diagnoses, and the wrong one sends someone to tune a limit that was
+    never the problem.
+    """
+    body = _body()
+    assert "not enough → do not start it" in body
+    assert "this run ran out of time" in body
+
+
+def test_the_per_gate_timeout_is_required_not_defaulted():
+    """A gate with no bound is an unfinished configuration, not one needing a default."""
+    body = _body()
+    assert "required by the schema**, not defaulted here" in body
+    assert "proposes 600" in body
+
+
+def test_the_two_bounds_are_distinguished():
+    """A per-gate timeout structurally cannot bound the whole set."""
+    body = _body()
+    assert "run_budget_seconds" in body
+    assert "a per-gate timeout structurally cannot close" in body
+
+
+def test_a_rerun_produces_two_evidence_items():
+    """Evidence is append-only and one item per execution.
+
+    Collapsing a rerun into one entry with a note would make the record disagree with
+    what actually ran, which is the one property the file exists to have.
+    """
+    body = _body()
+    assert "two attempts means two evidence items" in body
+    assert "not one item with a note" in body
+
+
+def test_a_repeatedly_flaky_gate_is_a_fact_candidate_not_a_fix_here():
+    body = _body()
+    assert "fact candidate" in body
+    assert "refine-harness" in body
+
+
+def test_verify_work_owns_only_two_of_the_four_completion_conditions():
+    """`verification_status: passed` is necessary for completion and never sufficient.
+
+    Reviewer blockers and task terminal status are about the work and the run, not about
+    the gates, and are settled where the run is.
+    """
+    body = _body()
+    assert "this skill owns 1 and 2, and nothing else" in body
+    assert "never a sufficient one" in body
+    assert "never report a run as complete" in body
 
 
 @pytest.mark.parametrize("rule", [

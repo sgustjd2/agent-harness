@@ -5,6 +5,31 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed — M5 slice 2: timeouts, the run budget, and what verify-work does not decide
+
+The classification vocabulary and the flaky rules were already in place from M2. What was
+missing was §15.3 — and the examples had started advertising `run_budget_seconds` before
+the Skill said anything about it.
+
+- **The run budget is named, defaulted nowhere, and spent deliberately.** Before each
+  gate, its `timeout_seconds` is compared against what remains. Not enough → **do not
+  start it**, classify `skipped`. Starting a gate that cannot finish spends the remainder
+  *and* produces a `timeout` saying *this gate is slow* when the truth is *this run ran
+  out of time* — two diagnoses, and the wrong one sends someone to tune a limit that was
+  never the problem.
+- **A budget-exhausted run is never `passed`**, however many gates passed before it ran
+  out. Some required gate did not run, which is what `unverified` means.
+- **`timeout_seconds` is required by the schema, not defaulted by this Skill.**
+  `init-project` proposes 600 when it detects a gate; a gate arriving without a bound is a
+  configuration the user has not finished, and running it anyway is how verification
+  becomes a hang nobody can attribute.
+- **A rerun writes two evidence items, not one with a note.** Now that evidence is
+  persisted, collapsing a rerun would make the record disagree with what ran — the one
+  property the file exists to have.
+- **`verification_status: passed` is necessary for completion and never sufficient.** All
+  four §15.7 conditions are stated, with the boundary made explicit: this Skill owns two
+  of them and never reports a run as complete.
+
 ### Fixed — M5 slice 4: the example configurations, and the claim about them
 
 **The examples were never validated.** Every README said its config was *"validated

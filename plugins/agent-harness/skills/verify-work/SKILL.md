@@ -122,10 +122,45 @@ is a later milestone, and adding it here quietly would pre-empt that decision.
 Each gate runs **once**, unless `flaky_policy: rerun-once` is configured. See the flaky
 rules below — the retry applies to exactly one classification, not to failure in general.
 
-If the run's verification budget is exhausted, every remaining gate is classified
-**`skipped`**, with the reason recorded, and `verification_status` becomes `unverified`.
-Those gates were selected and planned for execution, so they are not "never started" in
-the pre-execution sense — the run reached them and chose not to spend the budget.
+## Timeouts and the run budget
+
+Two bounds, and they answer different questions.
+
+| Bound | From | Absent |
+| :--- | :--- | :--- |
+| `timeout_seconds` | each gate | preflight `Blocked` — a gate with no bound can hang forever |
+| `run_budget_seconds` | `verification.run_budget_seconds` | no run bound; each gate keeps its own |
+
+`timeout_seconds` is **required by the schema**, not defaulted here. `init-project`
+proposes 600 when it detects a gate, and that number is a starting point the user edits —
+it is not a value this Skill supplies when one is missing. A gate arriving without a bound
+is a configuration the user has not finished, and running it anyway is how a verification
+step becomes a hang nobody can attribute.
+
+`run_budget_seconds` is optional and bounds the **whole gate set**. Three gates that each
+finish inside their own limit can still take longer than anyone will wait, which is the
+gap a per-gate timeout structurally cannot close.
+
+### Spending the budget
+
+Before starting each gate, compare its `timeout_seconds` against the budget remaining.
+
+- **Enough remaining → run it.**
+- **Not enough → do not start it.** Classify `skipped`, record that the budget could not
+  cover it, and move on.
+
+Starting a gate that cannot possibly finish is worse than skipping it: it spends the
+remainder, and it produces a `timeout` that says *this gate is slow* when the truth is
+*this run ran out of time*. Two different diagnoses, and the wrong one sends someone to
+tune a limit that was never the problem.
+
+When the budget is exhausted, every remaining gate is `skipped` with the reason recorded,
+and `verification_status` becomes `unverified`. Those gates were selected and planned, so
+they are not "never started" in the pre-execution sense — the run reached them and chose
+not to spend what was left.
+
+**A budget-exhausted run is never `passed`**, even when every gate that did run passed.
+Some required gate did not run, and that is exactly what `unverified` means.
 
 ## Two layers: blocking, then classification
 
@@ -177,6 +212,15 @@ Only `flaky_policy: rerun-once` produces a retry, and only for classification **
 - **`flaky` is never promoted to `pass`**, however tempting the second green result looks.
 - Record **both attempts** separately, each with its command, exit code and excerpt.
 
+**Two attempts means two evidence items**, not one item with a note. Evidence is
+append-only and one item per execution; collapsing a rerun into a single entry would
+make the record disagree with what actually ran, which is the one property the file
+exists to have.
+
+A repeatedly flaky gate is a **fact candidate**, not something to fix here — "`X` fails
+intermittently" is the kind of durable, project-specific observation `refine-harness`
+turns into memory. This Skill records it and moves on.
+
 ## verification_status
 
 The authoritative outcome, computed from **required** gates only:
@@ -202,6 +246,23 @@ substitute for them.
 Whenever `verification_status` is not `passed`, say plainly that the work is
 **unverified or failed**, and name the gates responsible. A report that reads like success
 while a required gate did not pass is the single worst output this Skill can produce.
+
+### What this Skill does not decide
+
+A run is `completed` only when **all four** of these hold:
+
+1. every `required: true` gate ran
+2. all of them classified `pass`
+3. no reviewer finding is a `blocker`
+4. every task has a terminal status
+
+**This Skill owns 1 and 2, and nothing else.** Conditions 3 and 4 are about the work and
+the run, not about the gates, and they are settled where the run is — so
+`verification_status: passed` is a necessary condition for completion and never a
+sufficient one.
+
+Never report a run as complete. Report what the gates did, and let whoever holds the run
+combine that with the rest.
 
 ## Evidence
 
