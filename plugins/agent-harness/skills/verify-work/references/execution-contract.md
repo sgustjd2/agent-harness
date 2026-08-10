@@ -53,8 +53,13 @@ malformed **required** gate means `verification_status` cannot be `passed`.
 - **Never rerun `timeout`.** It exhausts the same bound again and spends the budget.
 - Disagreeing attempts mean **`flaky`**, which is **never promoted to `pass`**. Record
   both attempts separately, each with command, exit code and excerpt.
+- Disagreeing attempts produce **two evidence items**, not one with a note.
+- **Do not start a gate whose `timeout_seconds` exceeds the remaining
+  `run_budget_seconds`.** Classify it `skipped`. Starting it spends the remainder and
+  turns "the run ran out of time" into "this gate is slow" -- two different diagnoses.
 - Budget exhaustion classifies every remaining gate **`skipped`**, and
-  `verification_status` becomes `unverified`.
+  `verification_status` becomes `unverified`. Such a run is never `passed`, however many
+  gates did pass before the budget ran out.
 
 ## Never
 
